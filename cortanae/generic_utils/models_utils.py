@@ -19,12 +19,14 @@ class TimestampModelMixin(models.Model):
         abstract = True
 
 
-class NoUserActionBaseModelMixin(UUIDPrimaryKeyModelMixin, TimestampModelMixin):
+class NoUserActionBaseModelMixin(
+    UUIDPrimaryKeyModelMixin, TimestampModelMixin
+):
     class Meta:
         abstract = True
-        
-class BaseModelMixin(UUIDPrimaryKeyModelMixin, TimestampModelMixin):
 
+
+class BaseModelMixin(UUIDPrimaryKeyModelMixin, TimestampModelMixin):
     class Meta:
         abstract = True
 
@@ -77,7 +79,6 @@ class BaseSoftDeleteModelMixin(
 ):
     class Meta:
         abstract = True
-
 
 
 class BaseActiveInactiveModelMixin(
