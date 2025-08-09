@@ -17,7 +17,6 @@ class Account(BaseModelMixin, ActiveInactiveModelMixin):
     ACCOUNT_TYPE = [
         ("savings", "Savings"),
         ("checking", "Checking"),
-        ("current", "Current"),
     ]
     user = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL
@@ -30,3 +29,4 @@ class Account(BaseModelMixin, ActiveInactiveModelMixin):
     bank_name = models.CharField(
         max_length=255, default="Cortanae Capital Bank"
     )
+    account_pin = models.CharField()
