@@ -1,3 +1,4 @@
+from enum import unique
 from django.db import models
 from cortanae.generic_utils.models_utils import (
     BaseModelMixin,
@@ -30,6 +31,9 @@ class KYC(BaseModelMixin):
     account_type = models.CharField(
         choices=ACCOUNT_TYPE, max_length=25, null=False, blank=False
     )
+    full_name = models.CharField(max_length=255)
+    email = models.CharField(unique=True, max_length=255)
+    phone_number = models.CharField(max_length=20, unique=True, null=True)
     income_range = models.CharField(max_length=35)
     address = models.TextField()
     state = models.CharField(max_length=50)

@@ -42,6 +42,10 @@ INSTALLED_APPS = [
     "apps.users",
     "rest_framework",
     "drf_spectacular",  # new
+    "apps.kyc",
+    "apps.notifications",
+    "apps.accounts",
+    "apps.transactions",
 ]
 
 MIDDLEWARE = [
