@@ -59,11 +59,14 @@ class Mailer:
     ) -> None:
         try:
             content = self._create_message(template, content)
+            print(content)
             if not sender:
                 sender = self.sender
             if not password:
                 password = self.password
             email_connection = self.reset_connection(sender, password)
+            print(email_connection)
+            print("sent here")
             send_mail(
                 title,
                 message,

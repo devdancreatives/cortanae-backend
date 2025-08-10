@@ -22,6 +22,9 @@ class User(AbstractUser, BaseModelMixin):
         full_name = "%s %s" % (self.first_name, self.last_name)
         return full_name.strip()
 
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
+
 
 class TokenValidator(BaseModelMixin):
     TOKEN_TYPE = [
