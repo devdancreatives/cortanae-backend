@@ -19,6 +19,7 @@ class Mailer:
             username = self.sender
         if not password:
             password = self.password
+        print(username, password)
         connection = get_connection(
             backend=settings.EMAIL_BACKEND,
             host=settings.EMAIL_HOST,
@@ -27,6 +28,7 @@ class Mailer:
             username=username,
             password=password,
         )
+        print(connection)
         return connection
 
     def _create_message(self, template, content: dict[str, Any]) -> str:
@@ -59,14 +61,11 @@ class Mailer:
     ) -> None:
         try:
             content = self._create_message(template, content)
-            print(content)
             if not sender:
                 sender = self.sender
             if not password:
                 password = self.password
             email_connection = self.reset_connection(sender, password)
-            print(email_connection)
-            print("sent here")
             send_mail(
                 title,
                 message,
@@ -77,6 +76,7 @@ class Mailer:
             )
         except Exception as e:
             # log the error somewhere
+            print(e)
             return e
 
     def mail_send_bulk(
