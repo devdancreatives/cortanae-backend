@@ -1,0 +1,97 @@
+{% load static %}
+<!doctype html>
+<html
+  lang="en"
+  style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+  "
+>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Verify Your Cortanae Capital Bank Account</title>
+    <style>
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      }
+      .btn {
+        background-color: #0d6efd;
+        color: #ffffff !important;
+        padding: 12px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: bold;
+      }
+      .btn:hover {
+        background-color: #0b5ed7;
+      }
+      .footer {
+        font-size: 12px;
+        color: #777777;
+        margin-top: 20px;
+        text-align: center;
+      }
+      .logo {
+        max-width: 160px;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body style="background-color: #f4f4f4; padding: 20px">
+    <div class="container">
+      <div style="text-align: center">
+        <img
+          src="{% static 'images/cortanae-logo.png' %}"
+          alt="Cortanae Capital Bank"
+          class="logo"
+        />
+      </div>
+
+      <h2 style="color: #111111">Verify Your Cortanae Capital Bank Account</h2>
+      <p>Dear {{ user.first_name|default:user.username }},</p>
+
+      <p>
+        Welcome to <strong>Cortanae Capital Bank</strong>! Please verify your
+        email address to activate your account and start enjoying our secure
+        banking services.
+      </p>
+
+      <p>
+        Click the button below to verify your account.
+        <strong>Note:</strong> This verification link will expire in
+        <strong>1 hour</strong> for your security.
+      </p>
+
+      <p style="text-align: center">
+        <a href="{{ verification_url }}" class="btn">Verify My Account</a>
+      </p>
+
+      <p>
+        If the button above doesn’t work, copy and paste this link into your
+        browser:
+      </p>
+      <p style="word-break: break-all; color: #0d6efd">
+        {{ verification_url }}
+      </p>
+
+      <p>
+        Thank you for choosing <strong>Cortanae Capital Bank</strong>.<br />
+        We look forward to serving you.
+      </p>
+
+      <div class="footer">
+        &copy; {{ current_year }} Cortanae Capital Bank. All rights reserved.<br />
+        This message was sent to {{ user.email }} because you registered an
+        account with Cortanae Capital Bank.
+      </div>
+    </div>
+  </body>
+</html>
