@@ -6,6 +6,7 @@ from .apis import (
     PasswordResetRequestView,
     PasswordResetView,
     RegisterAPIView,
+    VerifyAccount,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
     path("password-reset/request/", PasswordResetRequestView.as_view()),
     path("password-reset/", PasswordResetView.as_view()),
     path("update-password/", PasswordChangeView.as_view()),
+    path("verify-account/", VerifyAccount.as_view()),
 ]
