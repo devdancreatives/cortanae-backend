@@ -60,7 +60,8 @@ class KYC(BaseModelMixin):
     error_message = models.TextField(
         help_text="Kyc approval status message", blank=True
     )
-    status = models.CharField(choices=STATUS)
+    status = models.CharField(choices=STATUS, max_length=255)
 
     def __str__(self):
         return f"Kyc for {self.user.first_name} {self.user.last_name}"
+ 

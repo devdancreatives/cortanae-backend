@@ -29,24 +29,37 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 
+TOKEN_EXPIRY_MINUTES = 3600
 
 # Application definition
 
-INSTALLED_APPS = [
+
+# 1) Django core apps
+DJANGO_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "apps.users",
+]
+
+# 2) Third‑party apps
+THIRD_PARTY_APPS = [
     "rest_framework",
-    "drf_spectacular",  # new
+    "drf_spectacular",
+]
+
+# 3) Local (project) apps
+LOCAL_APPS = [
+    "apps.users.apps.UsersConfig",
     "apps.kyc",
     "apps.notifications",
     "apps.accounts",
     "apps.transactions",
 ]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -143,3 +156,17 @@ STATICFILES_DIRS = [
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+if DEBUG:
+    print("here")
+    # Console backend for development
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # Gmail SMTP backend for production
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')

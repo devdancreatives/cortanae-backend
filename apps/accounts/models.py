@@ -32,4 +32,4 @@ class Account(BaseModelMixin, ActiveInactiveModelMixin):
     bank_name = models.CharField(
         max_length=255, default="Cortanae Capital Bank"
     )
-    account_pin = models.CharField()
+    account_pin = models.CharField(max_length=255)

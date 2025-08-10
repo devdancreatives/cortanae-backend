@@ -4,6 +4,7 @@ from rest_framework import permissions
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
+    SpectacularRedocView
 )
 
 urlpatterns = [
@@ -12,5 +13,7 @@ urlpatterns = [
 
     # Swagger URLs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path("api/docs/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+
 ]

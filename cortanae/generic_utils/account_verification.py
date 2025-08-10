@@ -11,7 +11,7 @@ User = get_user_model()
 FE_URL = config("FRONT_END_URL")
 
 
-def verification_mail(instance: User, mail_type: str):
+def verification_mail(instance, mail_type):
     mail_type = mail_type.lower()
 
     token_generator = PasswordResetTokenGenerator()

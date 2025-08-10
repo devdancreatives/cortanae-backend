@@ -33,9 +33,12 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         email = attrs.get("email", None)
         username = attrs.get("username", None)
+        phone_number = attrs.get("phone_number", None)
         errors = {}
         if User.objects.filter(email__iexact=email).exists():
             errors["email"] = "Email already in use"
+        if User.objects.filter(phone_number__iexact=phone_number).exists():
+            errors["phone_number"] = "Phone Number already in use"
         if User.objects.filter(username__iexact=username).exists():
             errors["username"] = "Username already in use"
         if errors:
@@ -46,7 +49,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         email = validated_data.pop("email").lower()
         validated_data["email"] = email
-        user = User.objects.create_user(**validated_data)
+        user = User.objects.create_user(is_active=False, **validated_data)
         return user
 
 
