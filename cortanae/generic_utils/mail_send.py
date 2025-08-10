@@ -24,7 +24,6 @@ class Mailer:
             backend=settings.EMAIL_BACKEND,
             host=settings.EMAIL_HOST,
             port=settings.EMAIL_PORT,
-            use_ssl=True,
             username=username,
             password=password,
         )

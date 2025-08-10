@@ -108,14 +108,15 @@ class PasswordResetRequestSerializer(serializers.ModelSerializer):
 class VerifyAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = TokenValidator
-        fields = ["__all__"]
+        fields = '__all__'
 
     def validate(self, attrs):
         token = attrs.get("token").strip()
         if not token:
             raise ValidationError({"detail": "No token provided"})
 
-        token_instance = TokenValidator.objects.filter(token=token).exists()
+        token_instance = TokenValidator.objects.filter(token=token).first()
+        print("TokenValidator", token_instance)
         if not token_instance:
             return ValidationError({"detail": "Invalid token"})
 
