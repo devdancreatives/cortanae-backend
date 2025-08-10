@@ -20,7 +20,7 @@ def verification_mail(instance, mail_type):
     if mail_type == "verify_account":
         token_type = "verify_account"
         verification_url = f"{FE_URL}/auth/verification-account?q={token}"
-        template = "cortanae/templates/account_verification.html"
+        template = "account_verification.html"
         title = "Verify Your Cortanae Capital Bank Account"
         message = (
             "Please verify your account by clicking the link in this email."
@@ -28,7 +28,7 @@ def verification_mail(instance, mail_type):
     elif mail_type == "reset_password":
         token_type = "reset_password"
         verification_url = f"{FE_URL}/auth/reset-password?q={token}"
-        template = "cortanae/templates/password_reset.html"
+        template = "password_reset.html"
         title = "Reset Your Cortanae Capital Bank Account Password"
         message = "Please click the link in this email to reset your password."
     else:
