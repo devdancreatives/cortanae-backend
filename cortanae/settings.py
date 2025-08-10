@@ -18,9 +18,6 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-print("Base directory", os.path.join(BASE_DIR, "cortanae/templates/"))
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -31,7 +28,7 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 
-TOKEN_EXPIRY_MINUTES = 3600
+TOKEN_EXPIRY_MINUTES = 60
 
 # Application definition
 
@@ -161,7 +158,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 if DEBUG:
-    print("here")
     # Console backend for development
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
@@ -170,5 +166,6 @@ else:
     EMAIL_HOST = "smtp.gmail.com"
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+    EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+    DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")

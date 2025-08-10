@@ -12,20 +12,22 @@ User = get_user_model()
 TOKEN_EXPIRY_MINUTES = config("TOKEN_EXPIRY_MINUTES")
 
 
-def verify_token(
-    token_instance: TokenValidator,
-) -> Tuple[bool, Optional[User], str]:
+def verify_token(token_instance: TokenValidator):
     """
     Verifies a token and returns a tuple of:
     (is_valid, user_instance_or_none, reason)
-
-    reason is useful for returning error messages directly in views/serializers.
     """
     if not token_instance:
         return False, None, "Token not found"
 
+    # Ensure TOKEN_EXPIRY_MINUTES is converted to int
+    try:
+        expiry_minutes = int(TOKEN_EXPIRY_MINUTES)
+    except (ValueError, TypeError):
+        return False, None, "Invalid token expiry configuration"
+
     if timezone.now() > (
-        token_instance.created_at + timedelta(minutes=TOKEN_EXPIRY_MINUTES)
+        token_instance.created_at + timedelta(minutes=expiry_minutes)
     ):
         token_instance.delete()
         return False, None, "Token expired"
