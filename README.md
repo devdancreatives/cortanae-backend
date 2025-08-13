@@ -1,4 +1,5 @@
-cortanae-backend
+# Cortanae-backend
+
 
 ## Authentication Endpoints
 
@@ -12,6 +13,18 @@ cortanae-backend
 
 ## Account Endpoints (Auth)
 
-- Create Account API (account_type and account pin (encrpyt))
+- Account Detail API
+
 
 ## Transaction
+
+- Transaction History API
+- Create Deposit Transaction API 
+- Create Transfer Transaction API
+- Create Withdraw Transaction API
+
+## KYC
+
+- Create KYC Form API
+- Update KYC Form API
+

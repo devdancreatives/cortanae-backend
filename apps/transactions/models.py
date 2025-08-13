@@ -1,103 +1,124 @@
+from uuid import uuid4
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
-from apps.accounts.models import Account
+from django.core.exceptions import ValidationError
 from cortanae.generic_utils.models_utils import BaseModelMixin
+from apps.accounts.models import Account
+
+
+class TxCategory(models.TextChoices):
+    DEPOSIT = "deposit", "Deposit"
+    TRANSFER_INT = "transfer_internal", "Transfer (Internal)"
+    TRANSFER_EXT = "transfer_external", "Transfer (External Wire)"
+    WITHDRAWAL = "withdrawal", "Withdrawal"
+
+
+class TxStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+    FAILED = "failed", "Failed"
+
+
+class TxMethod(models.TextChoices):
+    BITCOIN = "bitcoin", "Bitcoin"
+    WIRE = "wire_transfer", "Wire Transfer"
+    BANK = "bank_transfer", "Bank Transfer"
+    INTERNAL = "internal", "Internal"
 
 
 class Transaction(BaseModelMixin):
-    STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("completed", "Completed"),
-        ("reversed", "Reversed"),
-        ("cancelled", "Cancelled"),
-    ]
-    TYPE_CHOICES = [
-        ("deposit", "Deposit"),
-        ("withdrawal", "Withdrawal"),
-        ("transfer", "Transfer"),
-        ("refund", "Refund"),
-    ]
-    METHOD_CHOICES = [
-        ("bitcoin", "Bitcoin"),
-        ("wire_transfer", "Wire Transfer"),
-        ("bank_transfer", "Bank Transfer"),
-    ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._old_status = self.status  # Store status at object load
-
-    user = models.ForeignKey(
-        Account,
-        on_delete=models.SET_NULL,
-        related_name="initiated_transactions",
-        null=True,
-    )
-    recipient = models.ForeignKey(
-        Account,
-        on_delete=models.SET_NULL,
-        related_name="received_transactions",
-        null=True,
-        blank=True,
-    )
-
-    amount = models.DecimalField(decimal_places=2, max_digits=12)
-    currency = models.CharField(max_length=10, default="USD")  # e.g., BTC, USD
-
-    status = models.CharField(choices=STATUS_CHOICES, max_length=15)
-    transaction_type = models.CharField(choices=TYPE_CHOICES, max_length=30)
-    transaction_method = models.CharField(
-        choices=METHOD_CHOICES, max_length=30
-    )
-
+    """
+    Lean single-table design:
+    - Use category to distinguish flows (deposit / transfer-int / transfer-ext / withdrawal)
+    - Optional source/destination for each flow
+    - Minimal meta goes to TransactionMeta
+    """
     reference = models.CharField(max_length=50, unique=True)
+    category = models.CharField(max_length=24, choices=TxCategory.choices)
+    method = models.CharField(max_length=24, choices=TxMethod.choices)
+
+    # Internal participants (optional depending on flow)
+    source_account = models.ForeignKey(
+        Account, null=True, blank=True, on_delete=models.SET_NULL, related_name="tx_source"
+    )
+    destination_account = models.ForeignKey(
+        Account, null=True, blank=True, on_delete=models.SET_NULL, related_name="tx_destination"
+    )
+
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    currency = models.CharField(max_length=10, default="USD")
+    fee_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+
+    status = models.CharField(max_length=16, choices=TxStatus.choices, default=TxStatus.PENDING)
     description = models.TextField(null=True, blank=True)
-    receipt = models.FileField(
-        upload_to="transactions/receipts/", null=True, blank=True
+
+    # Who initiated the transaction (user/admin)
+    initiated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="initiated_txs"
     )
-    payment_proof = models.FileField(
-        upload_to="transactions/payment_proofs/", null=True, blank=True
-    )
-    session_id = models.CharField(max_length=255, null=True, blank=True)
+
+    # Optional idempotency to prevent duplicates from FE
+    idempotency_key = models.CharField(max_length=100, null=True, blank=True, unique=True)
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["reference"]),
+            models.Index(fields=["category", "status"]),
+        ]
 
     def __str__(self):
-        return f"{self.transaction_type} - {self.amount} {self.currency}"
+        return f"{self.reference} • {self.category} • {self.amount} {self.currency} • {self.status}"
 
-    def save(self, *args, **kwargs):
-        self._changed_by = kwargs.pop(
-            "changed_by", None
-        )  # Who made the change
-        super().save(*args, **kwargs)
+    @property
+    def net_amount(self) -> Decimal:
+        return self.amount - (self.fee_amount or Decimal("0.00"))
+
+    def clean(self):
+        if self.amount <= 0:
+            raise ValidationError({"amount": "Amount must be greater than zero."})
+
+        if self.category == TxCategory.DEPOSIT:
+            if not self.destination_account:
+                raise ValidationError("Deposit requires a destination_account.")
+            if self.method not in (TxMethod.BITCOIN, TxMethod.WIRE, TxMethod.BANK):
+                raise ValidationError("Invalid method for deposit.")
+
+        if self.category == TxCategory.TRANSFER_INT:
+            if not self.source_account or not self.destination_account:
+                raise ValidationError("Internal transfer requires source and destination accounts.")
+            if self.source_account_id == self.destination_account_id:
+                raise ValidationError("Source and destination cannot be the same.")
+            if self.method != TxMethod.INTERNAL:
+                raise ValidationError("Internal transfer must use method 'internal'.")
+
+        if self.category in (TxCategory.TRANSFER_EXT, TxCategory.WITHDRAWAL):
+            if not self.source_account:
+                raise ValidationError("External transfer/withdrawal requires source_account.")
+            if self.method not in (TxMethod.WIRE, TxMethod.BANK, TxMethod.BITCOIN):
+                raise ValidationError("Invalid method for external transfer/withdrawal.")
 
 
 class TransactionMeta(models.Model):
-    """Extra details for specific transaction types (domestic wire, BTC tx hash, etc.)"""
+    """Optional extra fields per flow without bloating Transaction."""
+    transaction = models.OneToOneField(Transaction, on_delete=models.CASCADE, related_name="meta")
+    # External beneficiary (wire/bank)
+    beneficiary_name = models.CharField(max_length=255, null=True, blank=True)
+    beneficiary_account_number = models.CharField(max_length=255, null=True, blank=True)
+    beneficiary_bank_name = models.CharField(max_length=255, null=True, blank=True)
 
-    transaction = models.OneToOneField(
-        Transaction, on_delete=models.CASCADE, related_name="meta"
-    )
-    # Wire transfer fields
-    recipient_full_name = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-    recipient_account_number = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-    recipient_bank_name = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-
-    # Bitcoin-specific fields
-    blockchain_tx_hash = models.CharField(
-        max_length=255, null=True, blank=True
-    )
+    # Crypto
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
+    blockchain_tx_hash = models.CharField(max_length=255, null=True, blank=True)
+
+    # Attachments
+    payment_proof = models.FileField(upload_to="transactions/payment_proofs/", null=True, blank=True)
+    receipt = models.FileField(upload_to="transactions/receipts/", null=True, blank=True)
 
     def __str__(self):
-        return f"Meta for {self.transaction.reference}"
+        return f"Meta • {self.transaction.reference}"
 
 
 class TransactionHistory(BaseModelMixin):
@@ -105,32 +126,13 @@ class TransactionHistory(BaseModelMixin):
         ("created", "Created"),
         ("status_change", "Status Change"),
         ("details_update", "Details Update"),
-        ("reversed", "Reversed"),
-        ("cancelled", "Cancelled"),
     ]
-
-    transaction = models.ForeignKey(
-        "transactions.Transaction",
-        on_delete=models.CASCADE,
-        related_name="history",
-    )
-    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
-    previous_status = models.CharField(max_length=20, null=True, blank=True)
-    new_status = models.CharField(max_length=20, null=True, blank=True)
-    changed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,  # or Account model
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="transaction_changes",
-    )
-    metadata = models.JSONField(
-        default=dict, blank=True
-    )  # extra info about the change
-    note = models.TextField(null=True, blank=True)  # optional remarks
+    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE, related_name="history")
+    metadata = models.JSONField(default=dict, blank=True)
+    note = models.TextField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"History for {self.transaction.reference} - {self.action}"
+        return f"{self.transaction.reference} • {self.action}"

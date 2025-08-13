@@ -18,7 +18,6 @@ from rest_framework.generics import (
     GenericAPIView,
 )
 from .serializers import (
-    VerifyAccountSerializer,
     PasswordResetRequestSerializer,
     PasswordResetSerializer,
     PasswordChangeSerializer,
