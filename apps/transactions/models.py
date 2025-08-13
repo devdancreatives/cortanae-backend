@@ -11,10 +11,6 @@ class Transaction(BaseModelMixin):
         ("reversed", "Reversed"),
         ("cancelled", "Cancelled"),
     ]
-    FLOW_CHOICES = [
-        ("inflow", "Inflow"),
-        ("outflow", "Outflow"),
-    ]
     TYPE_CHOICES = [
         ("deposit", "Deposit"),
         ("withdrawal", "Withdrawal"),
@@ -49,7 +45,6 @@ class Transaction(BaseModelMixin):
     currency = models.CharField(max_length=10, default="USD")  # e.g., BTC, USD
 
     status = models.CharField(choices=STATUS_CHOICES, max_length=15)
-    flow = models.CharField(choices=FLOW_CHOICES, max_length=10)
     transaction_type = models.CharField(choices=TYPE_CHOICES, max_length=30)
     transaction_method = models.CharField(
         choices=METHOD_CHOICES, max_length=30
