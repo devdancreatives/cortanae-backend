@@ -47,6 +47,8 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "drf_spectacular",
+    "cloudinary",
+    "cloudinary_storage",
 ]
 
 # 3) Local (project) apps
@@ -169,3 +171,14 @@ else:
     EMAIL_HOST_USER = config("EMAIL_HOST_USER")
     DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
     EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+
+
+# Minimal Cloudinary config
+CLOUDINARY = {
+    "cloud_name": config("CLOUDINARY_CLOUD_NAME"),
+    "api_key": config("CLOUDINARY_API_KEY"),
+    "api_secret": config("CLOUDINARY_API_SECRET"),
+}
+
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+MEDIA_URL = "/media/"

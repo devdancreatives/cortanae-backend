@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from cloudinary.models import CloudinaryField
+
 from cortanae.generic_utils.models_utils import BaseModelMixin
 from apps.accounts.models import Account
 
@@ -113,9 +115,9 @@ class TransactionMeta(models.Model):
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
     blockchain_tx_hash = models.CharField(max_length=255, null=True, blank=True)
 
-    # Attachments
-    payment_proof = models.FileField(upload_to="transactions/payment_proofs/", null=True, blank=True)
-    receipt = models.FileField(upload_to="transactions/receipts/", null=True, blank=True)
+    # ✅ Cloudinary-managed assets (replaces FileField)
+    payment_proof = CloudinaryField("payment_proofs", null=True, blank=True, folder="transactions/payment_proofs")
+    receipt = CloudinaryField("receipts", null=True, blank=True, folder="transactions/receipts")
 
     def __str__(self):
         return f"Meta • {self.transaction.reference}"
