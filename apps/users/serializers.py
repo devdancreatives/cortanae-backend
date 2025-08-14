@@ -1,4 +1,5 @@
 import random
+import json
 
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
@@ -164,6 +165,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class UserLoginSerializer(TokenObtainPairSerializer):
+    
 
     def validate(self, attrs):
         email = attrs.get("email")
@@ -193,5 +195,5 @@ class UserLoginSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token["full_name"] = user.full_name
         token["email"] = user.email
-        token["account"] = getattr(user, "user_accounts", None)
+        # token["account"] = json(getattr(user, "user_accounts", None))
         return token
