@@ -1,4 +1,7 @@
-from django.utils.ipv6 import ValidationError
+import random
+import json
+
+from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from cortanae.generic_utils.account_verification import verification_mail
 from cortanae.generic_utils.token_verification import verify_token
@@ -7,6 +10,7 @@ from rest_framework_simplejwt.authentication import AuthUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import Token
 from typing import Union
+from apps.accounts.models import Account
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -17,6 +21,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True)
     country = serializers.CharField(required=True)
     phone_number = serializers.CharField(required=True)
+    account_type = serializers.CharField(write_only=True, required=False)
+    account_pin = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
@@ -28,17 +34,16 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             "last_name",
             "username",
             "phone_number",
+            "account_type",
+            "account_pin"
         ]
 
     def validate(self, attrs):
         email = attrs.get("email", None)
         username = attrs.get("username", None)
-        phone_number = attrs.get("phone_number", None)
         errors = {}
         if User.objects.filter(email__iexact=email).exists():
             errors["email"] = "Email already in use"
-        if User.objects.filter(phone_number__iexact=phone_number).exists():
-            errors["phone_number"] = "Phone Number already in use"
         if User.objects.filter(username__iexact=username).exists():
             errors["username"] = "Username already in use"
         if errors:
@@ -46,10 +51,28 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def _generate_account_number(self):
+        """Generate a unique 11-digit account number."""
+        while True:
+            account_number = str(random.randint(10**10, (10**11) - 1))
+            if not Account.objects.filter(account_number=account_number).exists():
+                return account_number
+    
     def create(self, validated_data):
         email = validated_data.pop("email").lower()
+        account_pin = validated_data.pop("account_pin")
+        account_type = validated_data.pop("account_type")
         validated_data["email"] = email
-        user = User.objects.create_user(is_active=False, **validated_data)
+        
+        account_number = self._generate_account_number()
+ 
+        user = User.objects.create_user(**validated_data)
+        Account.objects.create(
+           user=user,
+           account_type=account_type,
+           account_pin=account_pin,
+           account_number=account_number
+        )
         return user
 
 
@@ -105,43 +128,14 @@ class PasswordResetRequestSerializer(serializers.ModelSerializer):
         return user
 
 
-class VerifyAccountSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TokenValidator
-        fields = '__all__'
-
-    def validate(self, attrs):
-        token = attrs.get("token").strip()
-        if not token:
-            raise ValidationError({"detail": "No token provided"})
-
-        token_instance = TokenValidator.objects.filter(token=token).first()
-        print("TokenValidator", token_instance)
-        if not token_instance:
-            return ValidationError({"detail": "Invalid token"})
-
-        # verify token
-        user = User.objects.filter(email=token_instance.email).first()
-        if not user:
-            return ValidationError({"detail": "No user with email"})
-        is_valid, user, reason = verify_token(token_instance)
-        if not is_valid:
-            raise ValidationError({"detail", reason})
-        attrs["user"] = user
-        return attrs
-
-    def save(self, **kwargs):
-        user = self.validated_data["user"]
-        user.is_verified = True
-        user.save()
-
-        return user
-
-
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["__all__"]
+
+
+class EmailAvailabilitySerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -171,6 +165,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class UserLoginSerializer(TokenObtainPairSerializer):
+    
 
     def validate(self, attrs):
         email = attrs.get("email")
@@ -200,5 +195,5 @@ class UserLoginSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token["full_name"] = user.full_name
         token["email"] = user.email
-        token["account"] = getattr(user, "user_accounts", None)
+        # token["account"] = json(getattr(user, "user_accounts", None))
         return token

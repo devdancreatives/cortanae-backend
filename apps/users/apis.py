@@ -6,14 +6,18 @@ from django.core.validators import validate_email
 from rest_framework.response import Response
 from .models import TokenValidator, User
 from .serializers import (
+    EmailAvailabilitySerializer,
     PasswordChangeSerializer,
     UserRegisterSerializer,
 )
 from rest_framework.views import APIView
 from rest_framework import status
-from rest_framework.generics import CreateAPIView, UpdateAPIView
+from rest_framework.generics import (
+    CreateAPIView,
+    UpdateAPIView,
+    GenericAPIView,
+)
 from .serializers import (
-    VerifyAccountSerializer,
     PasswordResetRequestSerializer,
     PasswordResetSerializer,
     PasswordChangeSerializer,
@@ -51,6 +55,8 @@ class EmailAvailaibilityView(APIView):
     return - Response object
     """
 
+    serializer_class = EmailAvailabilitySerializer
+
     def post(self, request, *args, **kwargs):
         email = request.data.get("email")
         if email is None:
@@ -79,14 +85,25 @@ class EmailAvailaibilityView(APIView):
         )
 
 
-class VerifyAccount(CreateAPIView):
-    serializer_class = VerifyAccountSerializer
-    queryset = TokenValidator.objects.all()
-
+class VerifyAccount(APIView):
     def get(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        token = request.query_params.get("token", "").strip()
+        if not token:
+            return Response({"detail": "No token provided"}, status=400)
+
+        token_instance = TokenValidator.objects.filter(token=token).first()
+        if not token_instance:
+            return Response({"detail": "Invalid token"}, status=400)
+
+        user = token_instance.user
+        if user.is_verified:
+            return Response({"detail": "Account already verified"}, status=200)
+
+        user.is_verified = True
+        user.save()
+        return Response(
+            {"detail": "Account verified successfully"}, status=200
+        )
 
 
 class PasswordResetRequestView(CreateAPIView):
