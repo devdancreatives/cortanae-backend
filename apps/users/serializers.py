@@ -1,3 +1,5 @@
+import random
+
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from cortanae.generic_utils.account_verification import verification_mail
@@ -7,6 +9,7 @@ from rest_framework_simplejwt.authentication import AuthUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import Token
 from typing import Union
+from apps.accounts.models import Account
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -17,6 +20,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True)
     country = serializers.CharField(required=True)
     phone_number = serializers.CharField(required=True)
+    account_type = serializers.CharField(write_only=True, required=False)
+    account_pin = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
@@ -28,6 +33,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             "last_name",
             "username",
             "phone_number",
+            "account_type",
+            "account_pin"
         ]
 
     def validate(self, attrs):
@@ -43,10 +50,28 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def _generate_account_number(self):
+        """Generate a unique 11-digit account number."""
+        while True:
+            account_number = str(random.randint(10**10, (10**11) - 1))
+            if not Account.objects.filter(account_number=account_number).exists():
+                return account_number
+    
     def create(self, validated_data):
         email = validated_data.pop("email").lower()
+        account_pin = validated_data.pop("account_pin")
+        account_type = validated_data.pop("account_type")
         validated_data["email"] = email
+        
+        account_number = self._generate_account_number()
+ 
         user = User.objects.create_user(**validated_data)
+        Account.objects.create(
+           user=user,
+           account_type=account_type,
+           account_pin=account_pin,
+           account_number=account_number
+        )
         return user
 
 
