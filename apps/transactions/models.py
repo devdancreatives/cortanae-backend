@@ -37,32 +37,51 @@ class Transaction(BaseModelMixin):
     - Optional source/destination for each flow
     - Minimal meta goes to TransactionMeta
     """
-    reference = models.CharField(max_length=50, unique=True)
+
+    reference = models.CharField(max_length=50, unique=True, blank=True)
     category = models.CharField(max_length=24, choices=TxCategory.choices)
     method = models.CharField(max_length=24, choices=TxMethod.choices)
 
     # Internal participants (optional depending on flow)
     source_account = models.ForeignKey(
-        Account, null=True, blank=True, on_delete=models.SET_NULL, related_name="tx_source"
+        Account,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="tx_source",
     )
     destination_account = models.ForeignKey(
-        Account, null=True, blank=True, on_delete=models.SET_NULL, related_name="tx_destination"
+        Account,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="tx_destination",
     )
 
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     currency = models.CharField(max_length=10, default="USD")
-    fee_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    fee_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0.00")
+    )
 
-    status = models.CharField(max_length=16, choices=TxStatus.choices, default=TxStatus.PENDING)
+    status = models.CharField(
+        max_length=16, choices=TxStatus.choices, default=TxStatus.PENDING
+    )
     description = models.TextField(null=True, blank=True)
 
     # Who initiated the transaction (user/admin)
     initiated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="initiated_txs"
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="initiated_txs",
     )
 
     # Optional idempotency to prevent duplicates from FE
-    idempotency_key = models.CharField(max_length=100, null=True, blank=True, unique=True)
+    idempotency_key = models.CharField(
+        max_length=100, null=True, blank=True, unique=True
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -80,44 +99,82 @@ class Transaction(BaseModelMixin):
 
     def clean(self):
         if self.amount <= 0:
-            raise ValidationError({"amount": "Amount must be greater than zero."})
+            raise ValidationError(
+                {"amount": "Amount must be greater than zero."}
+            )
 
         if self.category == TxCategory.DEPOSIT:
             if not self.destination_account:
-                raise ValidationError("Deposit requires a destination_account.")
-            if self.method not in (TxMethod.BITCOIN, TxMethod.WIRE, TxMethod.BANK):
+                raise ValidationError(
+                    "Deposit requires a destination_account."
+                )
+            if self.method not in (
+                TxMethod.BITCOIN,
+                TxMethod.WIRE,
+                TxMethod.BANK,
+            ):
                 raise ValidationError("Invalid method for deposit.")
 
         if self.category == TxCategory.TRANSFER_INT:
             if not self.source_account or not self.destination_account:
-                raise ValidationError("Internal transfer requires source and destination accounts.")
+                raise ValidationError(
+                    "Internal transfer requires source and destination accounts."
+                )
             if self.source_account_id == self.destination_account_id:
-                raise ValidationError("Source and destination cannot be the same.")
+                raise ValidationError(
+                    "Source and destination cannot be the same."
+                )
             if self.method != TxMethod.INTERNAL:
-                raise ValidationError("Internal transfer must use method 'internal'.")
+                raise ValidationError(
+                    "Internal transfer must use method 'internal'."
+                )
 
         if self.category in (TxCategory.TRANSFER_EXT, TxCategory.WITHDRAWAL):
             if not self.source_account:
-                raise ValidationError("External transfer/withdrawal requires source_account.")
-            if self.method not in (TxMethod.WIRE, TxMethod.BANK, TxMethod.BITCOIN):
-                raise ValidationError("Invalid method for external transfer/withdrawal.")
+                raise ValidationError(
+                    "External transfer/withdrawal requires source_account."
+                )
+            if self.method not in (
+                TxMethod.WIRE,
+                TxMethod.BANK,
+                TxMethod.BITCOIN,
+            ):
+                raise ValidationError(
+                    "Invalid method for external transfer/withdrawal."
+                )
 
 
 class TransactionMeta(models.Model):
     """Optional extra fields per flow without bloating Transaction."""
-    transaction = models.OneToOneField(Transaction, on_delete=models.CASCADE, related_name="meta")
+
+    transaction = models.OneToOneField(
+        Transaction, on_delete=models.CASCADE, related_name="meta"
+    )
     # External beneficiary (wire/bank)
     beneficiary_name = models.CharField(max_length=255, null=True, blank=True)
-    beneficiary_account_number = models.CharField(max_length=255, null=True, blank=True)
-    beneficiary_bank_name = models.CharField(max_length=255, null=True, blank=True)
+    beneficiary_account_number = models.CharField(
+        max_length=255, null=True, blank=True
+    )
+    beneficiary_bank_name = models.CharField(
+        max_length=255, null=True, blank=True
+    )
 
     # Crypto
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
-    blockchain_tx_hash = models.CharField(max_length=255, null=True, blank=True)
+    blockchain_tx_hash = models.CharField(
+        max_length=255, null=True, blank=True
+    )
 
     # ✅ Cloudinary-managed assets (replaces FileField)
-    payment_proof = CloudinaryField("payment_proofs", null=True, blank=True, folder="transactions/payment_proofs")
-    receipt = CloudinaryField("receipts", null=True, blank=True, folder="transactions/receipts")
+    payment_proof = CloudinaryField(
+        "payment_proofs",
+        null=True,
+        blank=True,
+        folder="transactions/payment_proofs",
+    )
+    receipt = CloudinaryField(
+        "receipts", null=True, blank=True, folder="transactions/receipts"
+    )
 
     def __str__(self):
         return f"Meta • {self.transaction.reference}"
@@ -129,7 +186,9 @@ class TransactionHistory(BaseModelMixin):
         ("status_change", "Status Change"),
         ("details_update", "Details Update"),
     ]
-    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE, related_name="history")
+    transaction = models.ForeignKey(
+        Transaction, on_delete=models.CASCADE, related_name="history"
+    )
     metadata = models.JSONField(default=dict, blank=True)
     note = models.TextField(null=True, blank=True)
 

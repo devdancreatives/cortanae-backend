@@ -1,7 +1,10 @@
+from django.db import IntegrityError
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
 
+import string
+from random import choices
 from .models import Transaction, TransactionHistory
 
 
@@ -16,6 +19,24 @@ def store_old_transaction_state(sender, instance, **kwargs):
             instance._old_values = {}
     else:
         instance._old_values = {}
+
+
+@receiver(pre_save, sender=Transaction)
+def create_transaction_reference(sender, instance, **kwargs):
+    if not instance.reference:
+        MAX_RETRIES = 10
+        for _ in range(MAX_RETRIES):
+            generated_reference = "".join(
+                choices(string.ascii_letters + string.digits, k=8)
+            )
+            if not Transaction.objects.filter(
+                reference=generated_reference
+            ).exists():
+                instance.reference = f"TRX{generated_reference}"
+                return
+        import uuid
+
+        instance.reference = f"TRX{uuid.uuid4().hex[:8]}"
 
 
 # Create history after save
