@@ -15,14 +15,14 @@ urlpatterns = [
         name="Deposit into account",
     ),
     path(
-        "transaction/:reference/view",
+        "transaction/<str:reference>/view",
         TransactionInformationView.as_view(),
         name="Transaction information",
     ),
     path(
         "transaction/user-history",
         UserTransactionsHistoryView.as_view(),
-        "user transaction history",
+        name="user transaction history",
     ),
     path("transaction/transfer", TransferView.as_view()),
 ]

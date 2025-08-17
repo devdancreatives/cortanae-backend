@@ -16,10 +16,8 @@ from .models import (
 
 
 class DepositSerializer(serializers.ModelSerializer):
-    wallet_address = serializers.CharField(required=False, blank=True)
-    beneficiary_account_number = serializers.CharField(
-        required=False, blank=True
-    )
+    wallet_address = serializers.CharField(required=False)
+    beneficiary_account_number = serializers.CharField(required=False)
     category = serializers.CharField(required=True)
     amount = serializers.DecimalField(
         required=True, max_digits=14, decimal_places=2
@@ -118,6 +116,15 @@ class TransferSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
+        fields = [
+            "amount",
+            "category",
+            "method",
+            "description",
+            "beneficiary_account_number",
+            "beneficiary_bank_name",
+            "beneficiary_name",
+        ]
 
     def validate_amount(self, value):
         if value <= 0:
