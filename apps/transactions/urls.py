@@ -1,28 +1,27 @@
 from django.urls import path
 
-from apps.transactions.views import (
+from apps.transactions.apis import (
     DepositView,
     TransactionInformationView,
     TransferView,
     UserTransactionsHistoryView,
 )
 
-
 urlpatterns = [
     path(
-        "transaction/deposit",
+        "transaction/deposit/",
         DepositView.as_view(),
-        name="Deposit into account",
+        name="deposit_into_account",
     ),
     path(
-        "transaction/:reference/view",
+        "transaction/<uuid:reference>/view/",
         TransactionInformationView.as_view(),
-        name="Transaction information",
+        name="transaction_information",
     ),
     path(
-        "transaction/user-history",
+        "transaction/user-history/",
         UserTransactionsHistoryView.as_view(),
-        "user transaction history",
+        name="user_transaction_history",
     ),
-    path("transaction/transfer", TransferView.as_view()),
+    path("transaction/transfer/", TransferView.as_view()),
 ]

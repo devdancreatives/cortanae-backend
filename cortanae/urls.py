@@ -11,6 +11,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.users.urls')),
     path('api/', include("apps.kyc.urls")),
+    path('api/', include('apps.transactions.urls')),
 
     # Swagger URLs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

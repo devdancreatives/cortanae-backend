@@ -16,9 +16,9 @@ from .models import (
 
 
 class DepositSerializer(serializers.ModelSerializer):
-    wallet_address = serializers.CharField(required=False, blank=True)
+    wallet_address = serializers.CharField(required=False)
     beneficiary_account_number = serializers.CharField(
-        required=False, blank=True
+        required=False
     )
     category = serializers.CharField(required=True)
     amount = serializers.DecimalField(
