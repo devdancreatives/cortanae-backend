@@ -16,12 +16,14 @@ from rest_framework.generics import (
     CreateAPIView,
     UpdateAPIView,
     GenericAPIView,
+    RetrieveAPIView
 )
 from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetSerializer,
     PasswordChangeSerializer,
     UserLoginSerializer,
+    UserDetailsSerializer
 )
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -157,3 +159,15 @@ class PasswordChangeView(UpdateAPIView):
             {"detail": "Password updated successfully."},
             status=status.HTTP_200_OK,
         )
+
+class UserDetailsAPIView(RetrieveAPIView):
+    """
+    GET /api/user/me
+    Returns the authenticated user's details with account and kyc status
+    """
+    serializer_class = UserDetailsSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        # Always return the logged-in user
+        return self.request.user

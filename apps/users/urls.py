@@ -7,6 +7,7 @@ from .apis import (
     PasswordResetView,
     RegisterAPIView,
     VerifyAccount,
+    UserDetailsAPIView
 )
 
 urlpatterns = [
@@ -17,4 +18,6 @@ urlpatterns = [
     path("password-reset/", PasswordResetView.as_view()),
     path("update-password/", PasswordChangeView.as_view()),
     path("verify-account/", VerifyAccount.as_view()),
+    path("user/me/", UserDetailsAPIView.as_view(), name="user_details_api"),
+ 
 ]

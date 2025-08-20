@@ -212,3 +212,27 @@ class UserLoginSerializer(TokenObtainPairSerializer):
     def get_token(cls, user: AuthUser) -> Token:
         token = super().get_token(user)
         return token
+
+class UserDetailsSerializer(serializers.ModelSerializer):
+    account = AccountSerializer(source="user_accounts", read_only=True)
+    kyc_status = serializers.SerializerMethodField()
+    full_name = serializers.CharField(read_only=True)  # uses @property on User
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone_number",
+            "country",
+            "is_verified",
+            "full_name",
+            "account",
+            "kyc_status",
+        )
+
+    def get_kyc_status(self, obj):
+        return getattr(getattr(obj, "kyc_profile", None), "status", None)
+    
