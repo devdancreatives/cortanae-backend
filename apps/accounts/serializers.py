@@ -15,3 +15,18 @@ class AccountCreateSerializer(ModelSerializer):
     def create(self, validated_data):
 
         return super().create(**validated_data)
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account  # import from your app's models
+        fields = (
+            "id",
+            "account_name",
+            "account_type",
+            "bank_name",
+            "balance",
+            "account_number",
+        )
+
+   

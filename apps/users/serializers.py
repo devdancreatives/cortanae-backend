@@ -11,7 +11,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import Token
 from typing import Union
 from apps.accounts.models import Account
-
+from apps.accounts.serializers import AccountSerializer
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -69,6 +69,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         Account.objects.create(
            user=user,
+           account_name=user.full_name,
            account_type=account_type,
            account_pin=account_pin,
            account_number=account_number
@@ -129,10 +130,12 @@ class PasswordResetRequestSerializer(serializers.ModelSerializer):
 
 
 class UserInfoSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(read_only=True)
+
     class Meta:
         model = User
-        fields = ["__all__"]
-
+        exclude = ('password', 'is_staff', 'date_joined', 'user_permissions', 'groups', 'is_superuser')
+ 
 
 class EmailAvailabilitySerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -165,7 +168,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class UserLoginSerializer(TokenObtainPairSerializer):
-    
+    user = UserInfoSerializer(read_only=True)
 
     def validate(self, attrs):
         email = attrs.get("email")
@@ -188,12 +191,24 @@ class UserLoginSerializer(TokenObtainPairSerializer):
                 )
         if not user:
             raise ValidationError({"detail": "Invalid login credentials"})
-        return super().validate(attrs)
+
+         # Default validation (checks password, issues tokens)
+        data = super().validate(attrs)
+
+        # Attach serialized user data
+        data["user"] = UserInfoSerializer(user).data
+        
+        if hasattr(user, "user_accounts") and user.user_accounts:
+            data["account"] = AccountSerializer(user.user_accounts).data
+        
+        if hasattr(user, "kyc_profile") and user.kyc_profile:
+            data["kyc_status"] = getattr(user.kyc_profile, "status", None)
+        else:
+            data["kyc_status"] = None 
+        return data
+
 
     @classmethod
     def get_token(cls, user: AuthUser) -> Token:
         token = super().get_token(user)
-        token["full_name"] = user.full_name
-        token["email"] = user.email
-        # token["account"] = json(getattr(user, "user_accounts", None))
         return token
