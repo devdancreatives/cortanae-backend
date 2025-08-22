@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+
+# Django
+*.db
+db.sqlite3
+/media
+/staticfiles
+
+# Env & Secrets
+.env
+.env.*
+
+# VSCode / PyCharm / IDEs
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Gunicorn logs
+gunicorn-error.log
+gunicorn-access.log
+
+# Render / build outputs
+build/
+dist/
+*.egg-info/
+__pycache__/
+__pycache__
