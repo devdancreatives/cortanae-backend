@@ -34,7 +34,7 @@ def verification_mail(instance, mail_type):
     else:
         raise ValueError(f"Unknown mail type: {mail_type}")
 
-    TokenValidator.objects.create(user=user,
+    TokenValidator.objects.create(user=instance,
         email=instance.email, token=token, token_type=token_type
     )
 
