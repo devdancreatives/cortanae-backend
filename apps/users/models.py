@@ -34,3 +34,4 @@ class TokenValidator(BaseModelMixin):
     email = models.EmailField()
     token = models.CharField(max_length=100)
     token_type = models.CharField(choices=TOKEN_TYPE, max_length=25)
+    is_active = models.BooleanField(default=True)

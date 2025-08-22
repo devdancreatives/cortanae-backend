@@ -26,6 +26,8 @@ SECRET_KEY = config("SECRET_KEY")
 
 DEBUG = config("DEBUG", default=True, cast=bool)
 
+ENVIRONMENT = config("ENVIRONMENT", default="local")
+
 ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 
 TOKEN_EXPIRY_MINUTES = 60
@@ -160,7 +162,7 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-if DEBUG:
+if ENVIRONMENT == "local":
     # Console backend for development
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:

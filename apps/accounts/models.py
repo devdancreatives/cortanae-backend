@@ -22,7 +22,7 @@ class Account(BaseModelMixin, ActiveInactiveModelMixin):
         User,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="user_accounts",
     )
     account_number = models.CharField(max_length=25, unique=True, null=False)
