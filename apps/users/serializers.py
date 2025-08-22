@@ -33,7 +33,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             "last_name",
             "username",
             "phone_number",
-            "account_type",
             "account_pin"
         ]
 
@@ -60,7 +59,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         email = validated_data.pop("email").lower()
         account_pin = validated_data.pop("account_pin")
-        account_type = validated_data.pop("account_type")
         validated_data["email"] = email
         
         account_number = self._generate_account_number()

@@ -5,7 +5,6 @@ import random
 
 
 class AccountCreateSerializer(ModelSerializer):
-    account_type = serializers.CharField(required=True)
     account_pin = serializers.CharField(required=True)
 
     class Meta:
