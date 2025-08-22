@@ -23,9 +23,9 @@ class AccountSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "account_name",
-            "account_type",
             "bank_name",
-            "balance",
+            "checking_balance",
+            "savings_balance",
             "account_number",
         )
 

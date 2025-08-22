@@ -14,13 +14,13 @@ class AccountAdmin(admin.ModelAdmin):
         "account_number",
         "account_name",
         "user",
-        "balance",
-        "account_type",
+        "checking_balance",
+        "savings_balance",
         "bank_name",
         "is_active",
         "created_at",
     )
-    list_filter = ("account_type", "bank_name", "is_active", "created_at")
+    list_filter = ("bank_name", "is_active", "created_at")
     search_fields = ("account_number", "account_name", "user__username", "bank_name")
     readonly_fields = ("created_at", "updated_at")
     ordering = ("-created_at",)
@@ -28,11 +28,12 @@ class AccountAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Account Info", {
             "fields": (
+                "bank_name",
                 "account_number",
                 "account_name",
-                "account_type",
-                "bank_name",
-                "balance",
+                "checking_balance",
+                "savings_balance",
+             
             )
         }),
         ("User", {

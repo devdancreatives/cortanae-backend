@@ -38,9 +38,15 @@ class Transaction(BaseModelMixin):
     - Minimal meta goes to TransactionMeta
     """
 
+    ACCOUNT_TYPE = [
+        ("savings", "Savings"),
+        ("checking", "Checking"),
+    ]
+    
     reference = models.CharField(max_length=50, unique=True, blank=True)
     category = models.CharField(max_length=24, choices=TxCategory.choices)
     method = models.CharField(max_length=24, choices=TxMethod.choices)
+    account_type = models.CharField(choices=ACCOUNT_TYPE, max_length=30, blank=True, null=True)
 
     # Internal participants (optional depending on flow)
     source_account = models.ForeignKey(

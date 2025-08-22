@@ -27,8 +27,8 @@ class Account(BaseModelMixin, ActiveInactiveModelMixin):
     )
     account_number = models.CharField(max_length=25, unique=True, null=False)
     account_name = models.CharField(max_length=255)
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    account_type = models.CharField(choices=ACCOUNT_TYPE, max_length=30)
+    checking_balance = models.DecimalField("Checking Balance", max_digits=12, decimal_places=2, default=0)
+    savings_balance = models.DecimalField("Saving Balance", max_digits=12, decimal_places=2, default=0) 
     bank_name = models.CharField(
         max_length=255, default="Cortanae Capital Bank"
     )

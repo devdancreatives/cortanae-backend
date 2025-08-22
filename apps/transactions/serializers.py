@@ -34,6 +34,7 @@ class DepositSerializer(serializers.ModelSerializer):
             "category",
             "wallet_address",
             "beneficiary_account_number",
+            "account_type"
         ]
 
     def validate_amount(self, value):
@@ -55,7 +56,7 @@ class DepositSerializer(serializers.ModelSerializer):
         return value
 
     def validate_method(self, value):
-        if value not in [TxMethod.BITCOIN, TxMethod.WIRE, TxMethod.WIRE]:
+        if value not in [TxMethod.WIRE, TxMethod.BANK]:
             raise ValidationError({"detail": "Deposit method not allowed"})
         return value
 
@@ -124,6 +125,7 @@ class TransferSerializer(serializers.ModelSerializer):
             "beneficiary_account_number",
             "beneficiary_bank_name",
             "beneficiary_name",
+            "account_type",
         ]
 
     def validate_amount(self, value):
@@ -218,6 +220,7 @@ class TransferSerializer(serializers.ModelSerializer):
                 {"details": "Cannot transfer to your own account"}
             )
         amount = validated_data.get("amount")
+        acount_type = validated_data.get("account_type")
         with transaction.atomic():
             user_account = Account.objects.select_for_update().get(
                 pk=user_account.pk
@@ -228,11 +231,26 @@ class TransferSerializer(serializers.ModelSerializer):
 
             if user_account.balance < amount:
                 raise ValidationError({"details": "Insufficient funds"})
+            
             # debit sender
-            user_account.balance -= amount
-            destination_account.balance += amount
+            if acount_type == "savings":
+                if user_account.savings_balance < amount:
+                    raise ValidationError({"details": "Insufficient savings balance"})
+                user_account.savings_balance -= amount
+                destination_account.balance += amount
+                
+            elif acount_type == "checking":
+                if user_account.savings_balance < amount:
+                    raise ValidationError({"details": "Insufficient savings balance"})
+                user_account.checking_balance -= amount
+                destination_account.balance += amount
+
+            else:
+                raise ValidationError({"details": "Invalid account type"})
+            
             user_account.save()
             destination_account.save()
+            
             transaction_instance = Transaction.objects.create(
                 **validated_data,
                 destination_account=destination_account,

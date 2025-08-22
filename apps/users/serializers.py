@@ -21,7 +21,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True)
     country = serializers.CharField(required=True)
     phone_number = serializers.CharField(required=True)
-    account_type = serializers.CharField(write_only=True, required=False)
     account_pin = serializers.CharField(write_only=True, required=False)
 
     class Meta:
@@ -70,10 +69,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         Account.objects.create(
            user=user,
            account_name=user.full_name,
-           account_type=account_type,
            account_pin=account_pin,
            account_number=account_number
         )
+        
         return user
 
 
