@@ -96,10 +96,10 @@ class UserAdmin(DjangoUserAdmin, BaseStampedAdmin):
 @admin.register(TokenValidator)
 class TokenValidatorAdmin(BaseStampedAdmin):
     """Detail admin for TokenValidator records."""
-    list_display = ("id", "email", "token_type", "token", "created_at")
+    list_display = ("id", "user", "token_type", "token", "created_at")
     list_filter = ("token_type", "created_at")
-    search_fields = ("email", "token")
+    search_fields = ("user", "token")
     fieldsets = (
-        ("Token", {"fields": ("email", "token_type", "token")}),
+        ("Token", {"fields": ("user", "token_type", "token")}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )

@@ -31,6 +31,7 @@ class TokenValidator(BaseModelMixin):
         ("verify_account", "Verify account"),
         ("reset_password", "Reset password"),
     ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     email = models.EmailField()
     token = models.CharField(max_length=100)
     token_type = models.CharField(choices=TOKEN_TYPE, max_length=25)
