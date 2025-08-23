@@ -187,7 +187,7 @@ class TransactionMeta(BaseModelMixin):
         return f"Meta • {self.transaction.reference}"
 
 
-class TransactionHistory(BaseModelMixin):
+class TransactionHistory(models.Model):
     # ACTION_CHOICES = [
     #     ("created", "Created"),
     #     ("status_change", "Status Change"),

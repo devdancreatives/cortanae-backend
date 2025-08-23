@@ -53,7 +53,11 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         """Generate a unique 11-digit account number."""
         while True:
             account_number = str(random.randint(10**10, (10**11) - 1))
-            if not Account.objects.filter(account_number=account_number).exists():
+            if not Account.objects.filter(
+                checking_acc_number=account_number
+            ).exists() and not Account.objects.filter(
+                savings_acc_number=account_number
+            ).exists():
                 return account_number
     
     def create(self, validated_data):
