@@ -102,6 +102,7 @@ class TransferSerializer(serializers.ModelSerializer):
     banking_routing_number = serializers.CharField(required=False)
     recipient_address = serializers.CharField(required=False)
     account_type = serializers.CharField(required=True)
+    account_pin = serializers.CharField(write_only=True, required=True)
     class Meta:
         model = Transaction
         fields = [
@@ -116,6 +117,7 @@ class TransferSerializer(serializers.ModelSerializer):
             "bank_swift_code",
             "banking_routing_number",
             "recipient_address",
+            "account_pin",
         ]
 
     def validate_amount(self, value):
@@ -219,7 +221,10 @@ class TransferSerializer(serializers.ModelSerializer):
                 pk=destination_account.pk
             )
 
-            if user_account.balance < amount:
+            if account_type == "savings" and user_account.savings_acc_number < amount:
+                raise ValidationError({"details": "Insufficient funds"})
+            
+            if account_type == "checkings" and user_account.checking_acc_number < amount:
                 raise ValidationError({"details": "Insufficient funds"})
             
             # debit sender
@@ -248,6 +253,10 @@ class TransferSerializer(serializers.ModelSerializer):
             
             user_account.save()
             destination_account.save()
+            account_pin = validated_data.pop("account_pin")
+            
+            if not user_account.check_account_pin(account_pin):
+                raise ValidationError({"details": "Invalid account pin"})
             
             transaction_instance = Transaction.objects.create(
                 **validated_data,

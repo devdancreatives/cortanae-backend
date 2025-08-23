@@ -42,7 +42,7 @@ class AccountAdmin(BaseStampedAdmin):
         ("Owner", {"fields": ("user",)}),
         ("Account Numbers", {"fields": ("checking_acc_number", "savings_acc_number")}),
         ("Balances", {"fields": ("checking_balance", "savings_balance", "total_balance")}),
-        ("Bank & Security", {"fields": ("bank_name", "account_pin")}),
+        ("Bank & Security", {"fields": ("bank_name",)}),
         ("Status & Timestamps", {"fields": ("is_active", "created_at", "updated_at")}),
     )
 
