@@ -19,7 +19,7 @@ def verification_mail(instance, mail_type):
 
     if mail_type == "verify_account":
         token_type = "verify_account"
-        verification_url = f"{FE_URL}/auth/verification-account?q={token}"
+        verification_url = f"{FE_URL}/auth/verify-account?q={token}"
         template = "account_verification.html"
         title = "Verify Your Cortanae Capital Bank Account"
         message = (
@@ -34,7 +34,7 @@ def verification_mail(instance, mail_type):
     else:
         raise ValueError(f"Unknown mail type: {mail_type}")
 
-    TokenValidator.objects.create(
+    TokenValidator.objects.create(user=instance,
         email=instance.email, token=token, token_type=token_type
     )
 

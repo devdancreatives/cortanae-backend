@@ -14,10 +14,6 @@ db.sqlite3
 /media
 /staticfiles
 
-# Migrations (optional)
-**/migrations/
-!*/migrations/__init__.py
-
 # Env & Secrets
 .env
 .env.*

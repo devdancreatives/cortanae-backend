@@ -103,6 +103,10 @@ class VerifyAccount(APIView):
 
         user.is_verified = True
         user.save()
+        
+        token_instance.is_active = False
+        token_instance.save()
+        
         return Response(
             {"detail": "Account verified successfully"}, status=200
         )

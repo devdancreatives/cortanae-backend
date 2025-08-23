@@ -2,6 +2,7 @@ from django.forms import ValidationError
 from django.db import transaction
 from django.views.generic import detail
 from rest_framework import serializers
+from django.db.models import Q
 
 from apps.accounts.models import Account
 
@@ -16,14 +17,13 @@ from .models import (
 
 
 class DepositSerializer(serializers.ModelSerializer):
-    wallet_address = serializers.CharField(required=False)
-    beneficiary_account_number = serializers.CharField(required=False)
     category = serializers.CharField(required=True)
     amount = serializers.DecimalField(
         required=True, max_digits=14, decimal_places=2
     )
-    payment_proof = serializers.ImageField(required=True)
+    payment_proof = serializers.ImageField(required=True, write_only=True)
     method = serializers.CharField(required=True)
+    account_type = serializers.CharField(required=False)
 
     class Meta:
         model = Transaction
@@ -32,10 +32,9 @@ class DepositSerializer(serializers.ModelSerializer):
             "amount",
             "payment_proof",
             "category",
-            "wallet_address",
-            "beneficiary_account_number",
+            "account_type"
         ]
-
+    
     def validate_amount(self, value):
         if value <= 0:
             raise ValidationError(
@@ -55,55 +54,41 @@ class DepositSerializer(serializers.ModelSerializer):
         return value
 
     def validate_method(self, value):
-        if value not in [TxMethod.BITCOIN, TxMethod.WIRE, TxMethod.WIRE]:
+        if value not in [TxMethod.WIRE, TxMethod.BANK]:
             raise ValidationError({"detail": "Deposit method not allowed"})
         return value
 
     def validate(self, attrs):
         method = attrs.get("method")
-        wallet_address = attrs.get("wallet_address", "")
-        beneficiary_account_number = attrs.get("beneficiary_account_number")
-
-        if method == TxMethod.BITCOIN:
-            if not wallet_address:
-                raise ValidationError(
-                    {"details": "Wallet address not provided"}
-                )
-            attrs["beneficiary_account_number"] = ""
-        elif method in [TxMethod.WIRE, TxMethod.BANK]:
-            if not beneficiary_account_number:
-                raise ValidationError(
-                    {
-                        "details": "Beneficiary account number is required for bank/wire transfers."
-                    }
-                )
-            attrs["wallet_address"] = ""
-
         return attrs
 
     def create(self, validated_data):
         user = self.context["request"].user
         if not hasattr(user, "user_accounts"):
             raise ValidationError(
-                {"error": "User does not have an account with the bank"}
+                {"error": "User does not have an account on the platform"}
             )
         user_account = user.user_accounts
         payment_proof = validated_data.pop("payment_proof")
-        wallet_address = validated_data.pop("wallet_address")
         transaction = Transaction.objects.create(
             **validated_data,
             destination_account=user_account,
             initiated_by=user,
         )
-        account_number = validated_data.get("beneficiary_account_number", None)
+        # account_number = validated_data.get("beneficiary_account_number", None)
         TransactionMeta.objects.create(
             transaction=transaction,
-            wallet_address=wallet_address,
             payment_proof=payment_proof,
-            beneficiary_account_number=account_number,
         )
         return transaction
 
+    def to_representation(self, instance):
+        """Include payment_proof in output"""
+        data = super().to_representation(instance)
+        data["payment_proof"] = (
+            instance.meta.payment_proof.url if instance.meta and instance.meta.payment_proof else None
+        )
+        return data
 
 class TransferSerializer(serializers.ModelSerializer):
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)
@@ -113,7 +98,11 @@ class TransferSerializer(serializers.ModelSerializer):
     beneficiary_account_number = serializers.IntegerField()
     beneficiary_bank_name = serializers.CharField(required=True)
     beneficiary_name = serializers.CharField(required=True)
-
+    bank_swift_code = serializers.CharField(required=False)
+    banking_routing_number = serializers.CharField(required=False)
+    recipient_address = serializers.CharField(required=False)
+    account_type = serializers.CharField(required=True)
+    account_pin = serializers.CharField(write_only=True, required=True)
     class Meta:
         model = Transaction
         fields = [
@@ -124,6 +113,11 @@ class TransferSerializer(serializers.ModelSerializer):
             "beneficiary_account_number",
             "beneficiary_bank_name",
             "beneficiary_name",
+            "account_type",
+            "bank_swift_code",
+            "banking_routing_number",
+            "recipient_address",
+            "account_pin",
         ]
 
     def validate_amount(self, value):
@@ -204,7 +198,7 @@ class TransferSerializer(serializers.ModelSerializer):
         beneficiary_account_number = validated_data.pop(
             "beneficiary_account_number"
         )
-        destination_account = self.check_internal_account(
+        destination_acc_type, destination_account = self.check_internal_account(
             beneficiary_account_number
         )
         if not destination_account:
@@ -218,6 +212,7 @@ class TransferSerializer(serializers.ModelSerializer):
                 {"details": "Cannot transfer to your own account"}
             )
         amount = validated_data.get("amount")
+        account_type = validated_data.get("account_type")
         with transaction.atomic():
             user_account = Account.objects.select_for_update().get(
                 pk=user_account.pk
@@ -226,27 +221,78 @@ class TransferSerializer(serializers.ModelSerializer):
                 pk=destination_account.pk
             )
 
-            if user_account.balance < amount:
+            if account_type == "savings" and user_account.savings_acc_number < amount:
                 raise ValidationError({"details": "Insufficient funds"})
+            
+            if account_type == "checkings" and user_account.checking_acc_number < amount:
+                raise ValidationError({"details": "Insufficient funds"})
+            
             # debit sender
-            user_account.balance -= amount
-            destination_account.balance += amount
+            if account_type == "savings":
+                if user_account.savings_balance < amount:
+                    raise ValidationError({"details": "Insufficient savings balance"})
+                user_account.savings_balance -= amount
+                
+                if destination_acc_type == "checking":
+                    destination_account.checking_balance += amount
+                else:
+                    destination_account.savings_balance += amount
+                
+            elif account_type == "checking":
+                if user_account.savings_balance < amount:
+                    raise ValidationError({"details": "Insufficient savings balance"})
+                user_account.checking_balance -= amount
+                
+                if destination_acc_type == "checking":
+                    destination_account.checking_balance += amount
+                else:
+                    destination_account.savings_balance += amount
+
+            else:
+                raise ValidationError({"details": "Invalid account type"})
+            
             user_account.save()
             destination_account.save()
+            account_pin = validated_data.pop("account_pin")
+            
+            if not user_account.check_account_pin(account_pin):
+                raise ValidationError({"details": "Invalid account pin"})
+            
             transaction_instance = Transaction.objects.create(
                 **validated_data,
                 destination_account=destination_account,
-                status=TxStatus.COMPLETED,
+                status=TxStatus.SUCCESSFUL,
                 initiated_by=self.context["request"].user,
             )
             TransactionMeta.objects.create(transaction=transaction_instance)
 
-    def check_internal_account(self, account_number: int) -> Account | None:
-        try:
-            user_account = Account.objects.get(account_number=account_number)
-            return user_account
-        except Account.DoesNotExist:
+    def check_internal_account(account_number: str):
+        """
+        Fast, safe lookup for an internal account number across checking/savings.
+
+        Returns:
+            ("checking" | "savings", Account) if found, else None
+        """
+        normalized = (str(account_number) if account_number is not None else "").strip()
+        if not normalized:
+            print("[AccountLookup] Empty account_number provided.")
             return None
+
+        # Single round-trip using OR filter. `.first()` never raises DoesNotExist.
+        account = (
+            Account.objects
+            .only("id", "checking_acc_number", "savings_acc_number", "account_name", "user_id")
+            .filter(Q(checking_acc_number=normalized) | Q(savings_acc_number=normalized))
+            .first()
+        )
+
+        if not account:
+            print(f"[AccountLookup] Not found for '{normalized}'.")
+            return None
+
+        acct_type = "checking" if account.checking_acc_number == normalized else "savings"
+        print(f"[AccountLookup] Found {acct_type} account • id={account.id} • user_id={account.user_id}")
+        return acct_type, account
 
     def handle_external_transfer(self, validated_data, user_account):
         """Handle external transfers (wire/bank)"""
@@ -263,9 +309,10 @@ class TransferSerializer(serializers.ModelSerializer):
         }
 
         # just to confirm that the user is not trying to be smart
-        destination_account = self.check_internal_account(
+        acct_type, destination_account = self.check_internal_account(
             meta_data["beneficiary_account_number"]
         )
+        
         if user_account == destination_account:
             raise ValidationError(
                 {"details": "Transfers to the same account is not allowed"}

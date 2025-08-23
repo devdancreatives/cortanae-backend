@@ -8,6 +8,7 @@ from cloudinary.models import CloudinaryField
 from cortanae.generic_utils.models_utils import BaseModelMixin
 from apps.accounts.models import Account
 
+from decimal import Decimal
 
 class TxCategory(models.TextChoices):
     DEPOSIT = "deposit", "Deposit"
@@ -18,13 +19,12 @@ class TxCategory(models.TextChoices):
 
 class TxStatus(models.TextChoices):
     PENDING = "pending", "Pending"
-    COMPLETED = "completed", "Completed"
+    SUCCESSFUL = "successful", "Successful"
     CANCELLED = "cancelled", "Cancelled"
     FAILED = "failed", "Failed"
 
 
 class TxMethod(models.TextChoices):
-    BITCOIN = "bitcoin", "Bitcoin"
     WIRE = "wire_transfer", "Wire Transfer"
     BANK = "bank_transfer", "Bank Transfer"
     INTERNAL = "internal", "Internal"
@@ -38,9 +38,15 @@ class Transaction(BaseModelMixin):
     - Minimal meta goes to TransactionMeta
     """
 
+    ACCOUNT_TYPE = [
+        ("savings", "Savings"),
+        ("checking", "Checking"),
+    ]
+    
     reference = models.CharField(max_length=50, unique=True, blank=True)
     category = models.CharField(max_length=24, choices=TxCategory.choices)
     method = models.CharField(max_length=24, choices=TxMethod.choices)
+    account_type = models.CharField("Transaction Account Type", choices=ACCOUNT_TYPE, max_length=30, blank=True, null=True)
 
     # Internal participants (optional depending on flow)
     source_account = models.ForeignKey(
@@ -67,7 +73,7 @@ class Transaction(BaseModelMixin):
     status = models.CharField(
         max_length=16, choices=TxStatus.choices, default=TxStatus.PENDING
     )
-    description = models.TextField(null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
 
     # Who initiated the transaction (user/admin)
     initiated_by = models.ForeignKey(
@@ -109,7 +115,6 @@ class Transaction(BaseModelMixin):
                     "Deposit requires a destination_account."
                 )
             if self.method not in (
-                TxMethod.BITCOIN,
                 TxMethod.WIRE,
                 TxMethod.BANK,
             ):
@@ -137,12 +142,10 @@ class Transaction(BaseModelMixin):
             if self.method not in (
                 TxMethod.WIRE,
                 TxMethod.BANK,
-                TxMethod.BITCOIN,
             ):
                 raise ValidationError(
                     "Invalid method for external transfer/withdrawal."
                 )
-
 
 class TransactionMeta(models.Model):
     """Optional extra fields per flow without bloating Transaction."""
@@ -158,12 +161,12 @@ class TransactionMeta(models.Model):
     beneficiary_bank_name = models.CharField(
         max_length=255, null=True, blank=True
     )
-
-    # Crypto
-    wallet_address = models.CharField(max_length=255, null=True, blank=True)
-    blockchain_tx_hash = models.CharField(
+    banking_routing_number = models.CharField(
         max_length=255, null=True, blank=True
     )
+    bank_swift_code = models.CharField(max_length=255, null=True, blank=True)
+    recipient_address = models.TextField(null=True, blank=True)
+
 
     # ✅ Cloudinary-managed assets (replaces FileField)
     payment_proof = CloudinaryField(
@@ -175,17 +178,21 @@ class TransactionMeta(models.Model):
     receipt = CloudinaryField(
         "receipts", null=True, blank=True, folder="transactions/receipts"
     )
+    
+    class Meta:
+        verbose_name = "Transaction Details"
+        verbose_name_plural = "Transaction Details"  # ✅ Fix plural
 
     def __str__(self):
         return f"Meta • {self.transaction.reference}"
 
 
 class TransactionHistory(BaseModelMixin):
-    ACTION_CHOICES = [
-        ("created", "Created"),
-        ("status_change", "Status Change"),
-        ("details_update", "Details Update"),
-    ]
+    # ACTION_CHOICES = [
+    #     ("created", "Created"),
+    #     ("status_change", "Status Change"),
+    #     ("details_update", "Details Update"),
+    # ]
     transaction = models.ForeignKey(
         Transaction, on_delete=models.CASCADE, related_name="history"
     )
@@ -194,6 +201,9 @@ class TransactionHistory(BaseModelMixin):
 
     class Meta:
         ordering = ["-created_at"]
+        verbose_name = "Transaction History"
+        verbose_name_plural = "Transaction Histories"  # ✅ Fix plural
+
 
     def __str__(self):
-        return f"{self.transaction.reference} • {self.action}"
+        return f"{self.transaction.reference}"

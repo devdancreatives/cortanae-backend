@@ -21,7 +21,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True)
     country = serializers.CharField(required=True)
     phone_number = serializers.CharField(required=True)
-    account_type = serializers.CharField(write_only=True, required=False)
     account_pin = serializers.CharField(write_only=True, required=False)
 
     class Meta:
@@ -34,7 +33,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             "last_name",
             "username",
             "phone_number",
-            "account_type",
             "account_pin"
         ]
 
@@ -55,25 +53,30 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         """Generate a unique 11-digit account number."""
         while True:
             account_number = str(random.randint(10**10, (10**11) - 1))
-            if not Account.objects.filter(account_number=account_number).exists():
+            if not Account.objects.filter(
+                checking_acc_number=account_number
+            ).exists() and not Account.objects.filter(
+                savings_acc_number=account_number
+            ).exists():
                 return account_number
     
     def create(self, validated_data):
         email = validated_data.pop("email").lower()
         account_pin = validated_data.pop("account_pin")
-        account_type = validated_data.pop("account_type")
         validated_data["email"] = email
         
-        account_number = self._generate_account_number()
+        checking_acc_number = self._generate_account_number()
+        savings_acc_number = self._generate_account_number()
  
         user = User.objects.create_user(**validated_data)
         Account.objects.create(
            user=user,
            account_name=user.full_name,
-           account_type=account_type,
            account_pin=account_pin,
-           account_number=account_number
+           savings_acc_number=savings_acc_number,
+           checking_acc_number=checking_acc_number,
         )
+        
         return user
 
 

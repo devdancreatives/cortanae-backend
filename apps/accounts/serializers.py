@@ -5,7 +5,6 @@ import random
 
 
 class AccountCreateSerializer(ModelSerializer):
-    account_type = serializers.CharField(required=True)
     account_pin = serializers.CharField(required=True)
 
     class Meta:
@@ -23,10 +22,11 @@ class AccountSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "account_name",
-            "account_type",
             "bank_name",
-            "balance",
-            "account_number",
+            "checking_balance",
+            "savings_balance",
+            "checking_acc_number",
+            "savings_acc_number",
         )
 
    

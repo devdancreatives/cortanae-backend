@@ -26,6 +26,8 @@ SECRET_KEY = config("SECRET_KEY")
 
 DEBUG = config("DEBUG", default=True, cast=bool)
 
+ENVIRONMENT = config("ENVIRONMENT", default="local")
+
 ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 
 TOKEN_EXPIRY_MINUTES = 60
@@ -53,11 +55,11 @@ THIRD_PARTY_APPS = [
 
 # 3) Local (project) apps
 LOCAL_APPS = [
-    "apps.users",
-    "apps.kyc",
-    "apps.notifications",
-    "apps.accounts",
-    "apps.transactions",
+    "apps.users.apps.UsersConfig",
+    "apps.kyc.apps.KycConfig",
+    "apps.notifications.apps.NotificationsConfig",
+    "apps.accounts.apps.AccountsConfig",
+    "apps.transactions.apps.TransactionsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -106,13 +108,25 @@ WSGI_APPLICATION = "cortanae.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if ENVIRONMENT == "local":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("POSTGRES_DB"),
+            "USER": config("POSTGRES_USER"),
+            "PASSWORD": config("POSTGRES_PASSWORD"),
+            "HOST": config("POSTGRES_HOST"),
+            "PORT": config("POSTGRES_PORT", cast=int),
+        }
+    }
+
 
 
 # Password validation
@@ -160,7 +174,7 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-if DEBUG:
+if ENVIRONMENT == "local":
     # Console backend for development
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
@@ -187,4 +201,6 @@ MEDIA_URL = "/media/"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", 
     "http://127.0.0.1:3000",
+    "https://cortanae-frontend.vercel.app"
+    
 ]
