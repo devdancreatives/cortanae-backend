@@ -1,113 +1,116 @@
 from uuid import uuid4
 from decimal import Decimal
 
+from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.widgets import AdminSplitDateTime
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import (
-    Transaction,
-    TransactionMeta,
-    TransactionHistory,
-    TxStatus,
-)
+from .models import Transaction, TransactionMeta, TransactionHistory, TxStatus
 
 
-# ---------- Inlines ----------
+# ---------------- Admin Form (date-time picker override) ----------------
+class TransactionAdminForm(forms.ModelForm):
+    # Separate form-only field (not the model field) with a date+time picker
+    created_at_override = forms.DateTimeField(
+        required=False,
+        label="Created at (override)",
+        help_text="Optionally override the creation timestamp.",
+        widget=AdminSplitDateTime(),  # ✅ native admin date & time picker
+    )
+
+    class Meta:
+        model = Transaction
+        fields = "__all__"  # the real 'created_at' remains non-editable/readonly
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Prefill with current created_at for edits; default to now for new
+        if self.instance and self.instance.pk:
+            self.fields["created_at_override"].initial = self.instance.created_at
+        else:
+            self.fields["created_at_override"].initial = timezone.now()
+
+
+# ---------------- Inlines ----------------
 class TransactionMetaInline(admin.StackedInline):
     model = TransactionMeta
     extra = 0
     max_num = 1
     can_delete = True
-    readonly_fields = ("payment_proof_link", "receipt_link",)
+    readonly_fields = ("payment_proof_link", "receipt_link")
 
     fieldsets = (
         ("External Beneficiary (Wire/Bank)", {
-            "fields": (
-                "beneficiary_name", "beneficiary_account_number", "beneficiary_bank_name"
-            )
+            "fields": ("beneficiary_name", "beneficiary_account_number", "beneficiary_bank_name",
+                       "banking_routing_number", "bank_swift_code", "recipient_address")
         }),
         ("Attachments", {
-            "fields": (
-                "payment_proof", "payment_proof_link",
-                "receipt", "receipt_link",
-            )
+            "fields": ("payment_proof", "payment_proof_link", "receipt", "receipt_link")
         }),
     )
 
     @admin.display(description="Payment Proof (Cloudinary)")
     def payment_proof_link(self, obj: TransactionMeta):
-        if obj and obj.payment_proof:
-            return format_html('<a href="{}" target="_blank">Open</a>', obj.payment_proof.build_url())
+        try:
+            if obj and obj.payment_proof:
+                return format_html('<a href="{}" target="_blank">Open</a>', obj.payment_proof.build_url())
+        except Exception:
+            pass
         return "-"
 
     @admin.display(description="Receipt (Cloudinary)")
     def receipt_link(self, obj: TransactionMeta):
-        if obj and obj.receipt:
-            return format_html('<a href="{}" target="_blank">Open</a>', obj.receipt.build_url())
+        try:
+            if obj and obj.receipt:
+                return format_html('<a href="{}" target="_blank">Open</a>', obj.receipt.build_url())
+        except Exception:
+            pass
         return "-"
 
-# ---------- Admin ----------
+
+# ---------------- Admin ----------------
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     """
-    Detail-first admin for Transaction with:
-    - One-to-one Meta inline (Cloudinary links)
-    - History inline
+    Django 4.2 admin with:
+    - Date+time picker override for created_at (created_at_override)
+    - Meta inline
     - Status quick actions
-    - Safe idempotent reference generator
-    - Debug print() logs
-    (Django 4.2+)
+    - Reference autogeneration
+    - Debug prints
     """
-
+    form = TransactionAdminForm
     inlines = [TransactionMetaInline]
+
     list_display = (
-        "reference",
-        "category",
-        "method",
-        "amount_with_currency",
-        "fee_amount",
-        "net_amount_display",
-        "status_badge",
-        "source_link",
-        "destination_link",
-        "created_at",
+        "reference", "category", "method",
+        "amount_with_currency", "fee_amount", "net_amount_display",
+        "status_badge", "source_link", "destination_link", "created_at",
     )
     list_filter = ("category", "method", "status", "currency", "created_at")
     search_fields = (
-        "reference",
-        "error_message",
-        "currency",
-        "source_account__account_number",
-        "destination_account__account_number",
-        "meta__beneficiary_name",
-        "meta__beneficiary_account_number",
-        "meta__beneficiary_bank_name",
+        "reference", "error_message", "currency",
+        "meta__beneficiary_name", "meta__beneficiary_account_number", "meta__beneficiary_bank_name",
     )
-    readonly_fields = ("created_at", "updated_at", "net_amount_display",)
+    # Keep real timestamps readonly; we write created_at via explicit UPDATE after save.
+    readonly_fields = ("created_at", "updated_at", "net_amount_display")
     ordering = ("-created_at",)
 
     fieldsets = (
-        ("Identifiers", {
-            "fields": ("status", "reference",)
-        }),
-        ("Classification", {
-            "fields": ("category", "method", "account_type",)
-        }),
-        ("Participants", {
-            "fields": ("source_account", "destination_account",)
-        }),
-        ("Amounts", {
-            "fields": ("amount", "fee_amount", "currency", "net_amount_display",)
-        }),
-        ("Context", {
-            "fields": ("error_message", "initiated_by", "created_at", "updated_at",)
-        }),
+        ("Identifiers", {"fields": ("status", "reference")}),
+        ("Classification", {"fields": ("category", "method", "account_type")}),
+        ("Participants", {"fields": ("source_account", "destination_account")}),
+        ("Amounts", {"fields": ("amount", "fee_amount", "currency", "net_amount_display")}),
+        ("Context", {"fields": ("error_message", "initiated_by",
+                                "created_at_override", "created_at", "updated_at")}),
     )
 
-    actions = ("mark_completed", "mark_cancelled", "mark_failed")
+    actions = ("mark_successful", "mark_cancelled", "mark_failed")
 
-    # --------- Display helpers ---------
+    # -------- Display helpers --------
     @admin.display(description="Amount")
     def amount_with_currency(self, obj: Transaction) -> str:
         return f"{obj.amount} {obj.currency}"
@@ -144,20 +147,17 @@ class TransactionAdmin(admin.ModelAdmin):
         url = reverse("admin:accounts_account_change", args=[obj.destination_account_id])
         return format_html('<a href="{}">#{}</a>', url, obj.destination_account_id)
 
-    # --------- Query perf ---------
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related(
-            "source_account", "destination_account", "initiated_by"
-        ).prefetch_related("history")
+        return qs.select_related("source_account", "destination_account", "initiated_by").prefetch_related("history")
 
-    # --------- Save / Audit ---------
+    # -------- Save / Audit --------
     def save_model(self, request, obj: Transaction, form, change):
-        # Ensure reference for new objects
+        # Ensure reference exists
         if not obj.reference:
             obj.reference = uuid4().hex[:12].upper()
 
-        # Detect status change for history
+        # Track previous status
         previous_status = None
         if change:
             try:
@@ -165,9 +165,16 @@ class TransactionAdmin(admin.ModelAdmin):
             except Transaction.DoesNotExist:
                 previous_status = None
 
+        created_at_override = form.cleaned_data.get("created_at_override")
         print(f"[ADMIN] Saving Transaction • ref={obj.reference} • status={obj.status} • by={request.user}")
         super().save_model(request, obj, form, change)
 
+        # Apply created_at override via direct UPDATE (bypass non-editable/auto_now_add)
+        if created_at_override:
+            type(obj).objects.filter(pk=obj.pk).update(created_at=created_at_override)
+            print(f"[ADMIN] Overrode created_at • ref={obj.reference} • created_at={created_at_override}")
+
+        # Log status change (optional)
         if previous_status and previous_status != obj.status:
             TransactionHistory.objects.create(
                 transaction=obj,
@@ -176,7 +183,7 @@ class TransactionAdmin(admin.ModelAdmin):
             )
             print(f"[ADMIN] History logged • ref={obj.reference} • {previous_status} -> {obj.status}")
 
-    # --------- Bulk Actions ---------
+    # -------- Bulk Actions --------
     def _bulk_set_status(self, request, queryset, new_status: str, label: str):
         count = 0
         for tx in queryset:
@@ -194,9 +201,9 @@ class TransactionAdmin(admin.ModelAdmin):
             print(f"[ADMIN] Bulk {label} • ref={tx.reference} • {old} -> {new_status}")
         self.message_user(request, f"{count} transaction(s) marked as {label.lower()}.", level=messages.SUCCESS)
 
-    @admin.action(description="Mark as Completed")
-    def mark_completed(self, request, queryset):
-        self._bulk_set_status(request, queryset, TxStatus.COMPLETED, "Completed")
+    @admin.action(description="Mark as Successful")
+    def mark_successful(self, request, queryset):
+        self._bulk_set_status(request, queryset, TxStatus.SUCCESSFUL, "Successful")
 
     @admin.action(description="Mark as Cancelled")
     def mark_cancelled(self, request, queryset):
@@ -205,16 +212,3 @@ class TransactionAdmin(admin.ModelAdmin):
     @admin.action(description="Mark as Failed")
     def mark_failed(self, request, queryset):
         self._bulk_set_status(request, queryset, TxStatus.FAILED, "Failed")
-
-
-# Optional: register related models for direct access (read-friendly)
-# @admin.register(TransactionMeta)
-# class TransactionMetaAdmin(admin.ModelAdmin):
-#     list_display = ("transaction", "beneficiary_name", "beneficiary_bank_name")
-#     search_fields = ("transaction__reference", "beneficiary_name", "beneficiary_bank_name")
-
-
-# @admin.register(TransactionHistory)
-# class TransactionHistoryAdmin(admin.ModelAdmin):
-#     list_display = ("transaction", "created_at", "note")
-#     search_fields = ("transaction__reference", "note")
