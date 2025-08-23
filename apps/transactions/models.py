@@ -147,7 +147,7 @@ class Transaction(BaseModelMixin):
                     "Invalid method for external transfer/withdrawal."
                 )
 
-class TransactionMeta(BaseModelMixin):
+class TransactionMeta(models.Model):
     """Optional extra fields per flow without bloating Transaction."""
 
     transaction = models.OneToOneField(
@@ -187,7 +187,7 @@ class TransactionMeta(BaseModelMixin):
         return f"Meta • {self.transaction.reference}"
 
 
-class TransactionHistory(models.Model):
+class TransactionHistory(BaseModelMixin):
     # ACTION_CHOICES = [
     #     ("created", "Created"),
     #     ("status_change", "Status Change"),
