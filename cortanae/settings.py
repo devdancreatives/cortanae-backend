@@ -55,11 +55,11 @@ THIRD_PARTY_APPS = [
 
 # 3) Local (project) apps
 LOCAL_APPS = [
-    "apps.users",
-    "apps.kyc",
-    "apps.notifications",
-    "apps.accounts",
-    "apps.transactions",
+    "apps.users.apps.UsersConfig",
+    "apps.kyc.apps.KycConfig",
+    "apps.notifications.apps.NotificationsConfig",
+    "apps.accounts.apps.AccountsConfig",
+    "apps.transactions.apps.TransactionsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

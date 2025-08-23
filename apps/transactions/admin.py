@@ -47,15 +47,6 @@ class TransactionMetaInline(admin.StackedInline):
             return format_html('<a href="{}" target="_blank">Open</a>', obj.receipt.build_url())
         return "-"
 
-
-class TransactionHistoryInline(admin.TabularInline):
-    model = TransactionHistory
-    extra = 0
-    readonly_fields = ("created_at", "updated_at",)
-    fields = ("metadata", "note", "created_at",)
-    ordering = ("-created_at",)
-
-
 # ---------- Admin ----------
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
@@ -69,7 +60,7 @@ class TransactionAdmin(admin.ModelAdmin):
     (Django 4.2+)
     """
 
-    inlines = [TransactionMetaInline, TransactionHistoryInline]
+    inlines = [TransactionMetaInline]
     list_display = (
         "reference",
         "category",
@@ -98,10 +89,10 @@ class TransactionAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Identifiers", {
-            "fields": ("reference", "idempotency_key",)
+            "fields": ("status", "reference",)
         }),
         ("Classification", {
-            "fields": ("category", "method", "status", "account_type",)
+            "fields": ("category", "method", "account_type",)
         }),
         ("Participants", {
             "fields": ("source_account", "destination_account",)
@@ -130,7 +121,7 @@ class TransactionAdmin(admin.ModelAdmin):
     def status_badge(self, obj: Transaction):
         color = {
             TxStatus.PENDING: "#b58900",
-            TxStatus.COMPLETED: "#2aa198",
+            TxStatus.SUCCESSFUL: "#2aa198",
             TxStatus.CANCELLED: "#586e75",
             TxStatus.FAILED: "#dc322f",
         }.get(obj.status, "#657b83")
@@ -217,14 +208,13 @@ class TransactionAdmin(admin.ModelAdmin):
 
 
 # Optional: register related models for direct access (read-friendly)
-@admin.register(TransactionMeta)
-class TransactionMetaAdmin(admin.ModelAdmin):
-    list_display = ("transaction", "beneficiary_name", "beneficiary_bank_name")
-    search_fields = ("transaction__reference", "beneficiary_name", "beneficiary_bank_name")
+# @admin.register(TransactionMeta)
+# class TransactionMetaAdmin(admin.ModelAdmin):
+#     list_display = ("transaction", "beneficiary_name", "beneficiary_bank_name")
+#     search_fields = ("transaction__reference", "beneficiary_name", "beneficiary_bank_name")
 
 
-@admin.register(TransactionHistory)
-class TransactionHistoryAdmin(admin.ModelAdmin):
-    list_display = ("transaction", "created_at", "note")
-    search_fields = ("transaction__reference", "note")
-    ordering = ("-created_at",)
+# @admin.register(TransactionHistory)
+# class TransactionHistoryAdmin(admin.ModelAdmin):
+#     list_display = ("transaction", "created_at", "note")
+#     search_fields = ("transaction__reference", "note")

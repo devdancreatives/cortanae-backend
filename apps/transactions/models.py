@@ -8,9 +8,6 @@ from cloudinary.models import CloudinaryField
 from cortanae.generic_utils.models_utils import BaseModelMixin
 from apps.accounts.models import Account
 
-import uuid
-import string
-from random import choices
 from decimal import Decimal
 
 class TxCategory(models.TextChoices):
@@ -22,7 +19,7 @@ class TxCategory(models.TextChoices):
 
 class TxStatus(models.TextChoices):
     PENDING = "pending", "Pending"
-    COMPLETED = "completed", "Completed"
+    SUCCESSFUL = "successful", "Successful"
     CANCELLED = "cancelled", "Cancelled"
     FAILED = "failed", "Failed"
 
@@ -149,24 +146,8 @@ class Transaction(BaseModelMixin):
                 raise ValidationError(
                     "Invalid method for external transfer/withdrawal."
                 )
-    def save(self, *args, **kwargs):
-        """
-        Generate a unique reference if missing:
-        - Single random candidate (TRX + 8 upper alphanumerics)
-        - If collision, fallback to UUID slice (TRX + 8)
-        - No retry loops
-        """
-        if not self.reference:
-            candidate = f"TRX{''.join(choices(string.ascii_uppercase + string.digits, k=8))}"
-            if Transaction.objects.filter(reference=candidate).exists():
-                candidate = f"TRX{uuid.uuid4().hex[:8].upper()}"
-            self.reference = candidate
-            print(f"[MODEL] Generated Transaction.reference={self.reference}")
 
-        print(f"[MODEL] Saving Transaction • ref={self.reference} • status={self.status}")
-        super().save(*args, **kwargs) 
-
-class TransactionMeta(models.Model):
+class TransactionMeta(BaseModelMixin):
     """Optional extra fields per flow without bloating Transaction."""
 
     transaction = models.OneToOneField(
@@ -197,17 +178,21 @@ class TransactionMeta(models.Model):
     receipt = CloudinaryField(
         "receipts", null=True, blank=True, folder="transactions/receipts"
     )
-  
+    
+    class Meta:
+        verbose_name = "Transaction Details"
+        verbose_name_plural = "Transaction Details"  # ✅ Fix plural
+
     def __str__(self):
         return f"Meta • {self.transaction.reference}"
 
 
 class TransactionHistory(BaseModelMixin):
-    ACTION_CHOICES = [
-        ("created", "Created"),
-        ("status_change", "Status Change"),
-        ("details_update", "Details Update"),
-    ]
+    # ACTION_CHOICES = [
+    #     ("created", "Created"),
+    #     ("status_change", "Status Change"),
+    #     ("details_update", "Details Update"),
+    # ]
     transaction = models.ForeignKey(
         Transaction, on_delete=models.CASCADE, related_name="history"
     )
@@ -221,4 +206,4 @@ class TransactionHistory(BaseModelMixin):
 
 
     def __str__(self):
-        return f"{self.transaction.reference} • {self.action}"
+        return f"{self.transaction.reference}"

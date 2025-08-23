@@ -252,7 +252,7 @@ class TransferSerializer(serializers.ModelSerializer):
             transaction_instance = Transaction.objects.create(
                 **validated_data,
                 destination_account=destination_account,
-                status=TxStatus.COMPLETED,
+                status=TxStatus.SUCCESSFUL,
                 initiated_by=self.context["request"].user,
             )
             TransactionMeta.objects.create(transaction=transaction_instance)
