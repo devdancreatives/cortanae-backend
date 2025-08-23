@@ -180,6 +180,12 @@ class TransactionMeta(models.Model):
     beneficiary_bank_name = models.CharField(
         max_length=255, null=True, blank=True
     )
+    banking_routing_number = models.CharField(
+        max_length=255, null=True, blank=True
+    )
+    bank_swift_code = models.CharField(max_length=255, null=True, blank=True)
+    recipient_address = models.TextField(null=True, blank=True)
+
 
     # ✅ Cloudinary-managed assets (replaces FileField)
     payment_proof = CloudinaryField(
@@ -191,7 +197,7 @@ class TransactionMeta(models.Model):
     receipt = CloudinaryField(
         "receipts", null=True, blank=True, folder="transactions/receipts"
     )
-
+  
     def __str__(self):
         return f"Meta • {self.transaction.reference}"
 

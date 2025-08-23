@@ -98,7 +98,10 @@ class TransferSerializer(serializers.ModelSerializer):
     beneficiary_account_number = serializers.IntegerField()
     beneficiary_bank_name = serializers.CharField(required=True)
     beneficiary_name = serializers.CharField(required=True)
-
+    bank_swift_code = serializers.CharField(required=False)
+    banking_routing_number = serializers.CharField(required=False)
+    recipient_address = serializers.CharField(required=False)
+    account_type = serializers.CharField(required=True)
     class Meta:
         model = Transaction
         fields = [
@@ -110,6 +113,9 @@ class TransferSerializer(serializers.ModelSerializer):
             "beneficiary_bank_name",
             "beneficiary_name",
             "account_type",
+            "bank_swift_code",
+            "banking_routing_number",
+            "recipient_address",
         ]
 
     def validate_amount(self, value):
