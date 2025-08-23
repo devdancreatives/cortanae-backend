@@ -61,14 +61,16 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         account_pin = validated_data.pop("account_pin")
         validated_data["email"] = email
         
-        account_number = self._generate_account_number()
+        checking_acc_number = self._generate_account_number()
+        savings_acc_number = self._generate_account_number()
  
         user = User.objects.create_user(**validated_data)
         Account.objects.create(
            user=user,
            account_name=user.full_name,
            account_pin=account_pin,
-           account_number=account_number
+           savings_acc_number=savings_acc_number,
+           checking_acc_number=checking_acc_number,
         )
         
         return user

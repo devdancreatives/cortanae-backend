@@ -25,7 +25,8 @@ class AccountSerializer(serializers.ModelSerializer):
             "bank_name",
             "checking_balance",
             "savings_balance",
-            "account_number",
+            "checking_acc_number",
+            "savings_acc_number",
         )
 
    

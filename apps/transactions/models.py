@@ -8,6 +8,10 @@ from cloudinary.models import CloudinaryField
 from cortanae.generic_utils.models_utils import BaseModelMixin
 from apps.accounts.models import Account
 
+import uuid
+import string
+from random import choices
+from decimal import Decimal
 
 class TxCategory(models.TextChoices):
     DEPOSIT = "deposit", "Deposit"
@@ -24,7 +28,6 @@ class TxStatus(models.TextChoices):
 
 
 class TxMethod(models.TextChoices):
-    BITCOIN = "bitcoin", "Bitcoin"
     WIRE = "wire_transfer", "Wire Transfer"
     BANK = "bank_transfer", "Bank Transfer"
     INTERNAL = "internal", "Internal"
@@ -46,7 +49,7 @@ class Transaction(BaseModelMixin):
     reference = models.CharField(max_length=50, unique=True, blank=True)
     category = models.CharField(max_length=24, choices=TxCategory.choices)
     method = models.CharField(max_length=24, choices=TxMethod.choices)
-    account_type = models.CharField(choices=ACCOUNT_TYPE, max_length=30, blank=True, null=True)
+    account_type = models.CharField("Transaction Account Type", choices=ACCOUNT_TYPE, max_length=30, blank=True, null=True)
 
     # Internal participants (optional depending on flow)
     source_account = models.ForeignKey(
@@ -73,7 +76,7 @@ class Transaction(BaseModelMixin):
     status = models.CharField(
         max_length=16, choices=TxStatus.choices, default=TxStatus.PENDING
     )
-    description = models.TextField(null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
 
     # Who initiated the transaction (user/admin)
     initiated_by = models.ForeignKey(
@@ -115,7 +118,6 @@ class Transaction(BaseModelMixin):
                     "Deposit requires a destination_account."
                 )
             if self.method not in (
-                TxMethod.BITCOIN,
                 TxMethod.WIRE,
                 TxMethod.BANK,
             ):
@@ -143,12 +145,26 @@ class Transaction(BaseModelMixin):
             if self.method not in (
                 TxMethod.WIRE,
                 TxMethod.BANK,
-                TxMethod.BITCOIN,
             ):
                 raise ValidationError(
                     "Invalid method for external transfer/withdrawal."
                 )
+    def save(self, *args, **kwargs):
+        """
+        Generate a unique reference if missing:
+        - Single random candidate (TRX + 8 upper alphanumerics)
+        - If collision, fallback to UUID slice (TRX + 8)
+        - No retry loops
+        """
+        if not self.reference:
+            candidate = f"TRX{''.join(choices(string.ascii_uppercase + string.digits, k=8))}"
+            if Transaction.objects.filter(reference=candidate).exists():
+                candidate = f"TRX{uuid.uuid4().hex[:8].upper()}"
+            self.reference = candidate
+            print(f"[MODEL] Generated Transaction.reference={self.reference}")
 
+        print(f"[MODEL] Saving Transaction • ref={self.reference} • status={self.status}")
+        super().save(*args, **kwargs) 
 
 class TransactionMeta(models.Model):
     """Optional extra fields per flow without bloating Transaction."""
@@ -162,12 +178,6 @@ class TransactionMeta(models.Model):
         max_length=255, null=True, blank=True
     )
     beneficiary_bank_name = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-
-    # Crypto
-    wallet_address = models.CharField(max_length=255, null=True, blank=True)
-    blockchain_tx_hash = models.CharField(
         max_length=255, null=True, blank=True
     )
 
@@ -200,6 +210,9 @@ class TransactionHistory(BaseModelMixin):
 
     class Meta:
         ordering = ["-created_at"]
+        verbose_name = "Transaction History"
+        verbose_name_plural = "Transaction Histories"  # ✅ Fix plural
+
 
     def __str__(self):
         return f"{self.transaction.reference} • {self.action}"
