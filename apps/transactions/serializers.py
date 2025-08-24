@@ -340,18 +340,21 @@ class TransferSerializer(serializers.ModelSerializer):
         except Exception as e:
             raise ValidationError({"detail": f"Transfer failed: {str(e)}"})
 
-
-class TransactionHistorySerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = TransactionHistory
-        depth = 1
-        fields = "__all__"
-
-
 class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
         depth = 1
         fields = "__all__"
+
+
+
+class TransactionHistorySerializer(serializers.ModelSerializer):
+    # transaction = TransactionSerializer(read_only=True)
+
+    class Meta:
+        model = TransactionHistory
+        depth = 1
+        fields = '__all__'
+
+

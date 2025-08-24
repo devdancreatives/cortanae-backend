@@ -11,29 +11,6 @@ from django.utils.html import format_html
 from .models import Transaction, TransactionMeta, TransactionHistory, TxStatus
 
 
-# ---------------- Admin Form (date-time picker override) ----------------
-class TransactionAdminForm(forms.ModelForm):
-    # Separate form-only field (not the model field) with a date+time picker
-    created_at_override = forms.DateTimeField(
-        required=False,
-        label="Created at (override)",
-        help_text="Optionally override the creation timestamp.",
-        widget=AdminSplitDateTime(),  # ✅ native admin date & time picker
-    )
-
-    class Meta:
-        model = Transaction
-        fields = "__all__"  # the real 'created_at' remains non-editable/readonly
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Prefill with current created_at for edits; default to now for new
-        if self.instance and self.instance.pk:
-            self.fields["created_at_override"].initial = self.instance.created_at
-        else:
-            self.fields["created_at_override"].initial = timezone.now()
-
-
 # ---------------- Inlines ----------------
 class TransactionMetaInline(admin.StackedInline):
     model = TransactionMeta
@@ -76,13 +53,11 @@ class TransactionMetaInline(admin.StackedInline):
 class TransactionAdmin(admin.ModelAdmin):
     """
     Django 4.2 admin with:
-    - Date+time picker override for created_at (created_at_override)
     - Meta inline
     - Status quick actions
     - Reference autogeneration
     - Debug prints
     """
-    form = TransactionAdminForm
     inlines = [TransactionMetaInline]
 
     list_display = (
@@ -105,7 +80,7 @@ class TransactionAdmin(admin.ModelAdmin):
         ("Participants", {"fields": ("source_account", "destination_account")}),
         ("Amounts", {"fields": ("amount", "fee_amount", "currency", "net_amount_display")}),
         ("Context", {"fields": ("error_message", "initiated_by",
-                                "created_at_override", "created_at", "updated_at")}),
+                                "created_at", "updated_at")}),
     )
 
     actions = ("mark_successful", "mark_cancelled", "mark_failed")
@@ -165,14 +140,8 @@ class TransactionAdmin(admin.ModelAdmin):
             except Transaction.DoesNotExist:
                 previous_status = None
 
-        created_at_override = form.cleaned_data.get("created_at_override")
         print(f"[ADMIN] Saving Transaction • ref={obj.reference} • status={obj.status} • by={request.user}")
         super().save_model(request, obj, form, change)
-
-        # Apply created_at override via direct UPDATE (bypass non-editable/auto_now_add)
-        if created_at_override:
-            type(obj).objects.filter(pk=obj.pk).update(created_at=created_at_override)
-            print(f"[ADMIN] Overrode created_at • ref={obj.reference} • created_at={created_at_override}")
 
         # Log status change (optional)
         if previous_status and previous_status != obj.status:
