@@ -36,17 +36,35 @@ class TransferView(CreateAPIView):
 
 class UserTransactionsHistoryView(ListAPIView):
     serializer_class = TransactionHistorySerializer
-    queryset = TransactionHistory.objects.all()
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        user_account = user.user_accounts
-        return self.queryset.filter(
-            Q(__transaction__initiated_by=user)
-            | Q(__transaction__source_account=user_account)
-            | Q(__transaction__destination_account=user_account)
+        user_account = getattr(user, "user_accounts", None)
+
+        base_q = Q(transaction__initiated_by=user)  # ✅ correct relation prefix
+
+        # Add account-based filters only if account exists
+        if user_account:
+            base_q |= Q(transaction__source_account=user_account) | Q(
+                transaction__destination_account=user_account
+            )
+
+        qs = (
+            TransactionHistory.objects
+            .select_related("transaction")  # perf
+            .filter(base_q)
+            .order_by("-created_at")
         )
+
+        # Debug logs
+        print(
+            "[DEBUG] UserTransactionsHistoryView",
+            f"user_id={getattr(user, 'id', None)}",
+            f"user_account_id={getattr(user_account, 'id', None)}",
+            f"count={qs.count()}",
+        )
+        return qs
 
 
 class TransactionInformationView(RetrieveAPIView):
