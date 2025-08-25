@@ -16,6 +16,8 @@ from .models import (
     TxStatus,
 )
 
+import logging
+db_logger = logging.getLogger("db")  # for database-related logs
 
 class DepositSerializer(serializers.ModelSerializer):
     category = serializers.CharField(required=True)
@@ -351,36 +353,92 @@ class TransferSerializer(serializers.ModelSerializer):
         )
         return acct_type, account
 
-    def handle_external_transfer(
-        self, validated_data, meta_data, user_account
-    ):
-        """Handle external transfers (wire/bank)"""
-        acct_type, destination_account = self.check_internal_account(
-            meta_data.get("beneficiary_account_number")
-        )
-        account_pin = validated_data.pop("account_pin")
+    # def handle_external_transfer(
+    #     self, validated_data, meta_data, user_account
+    # ):
+    #     """Handle external transfers (wire/bank)"""
+    #     acct_type, destination_account = self.check_internal_account(
+    #         meta_data.get("beneficiary_account_number")
+    #     )
+    #     account_pin = validated_data.pop("account_pin")
         
-        if user_account == destination_account:
-            raise ValidationError(
-                {"details": "Transfers to the same account is not allowed"}
-            )
-        try:
+    #     if user_account == destination_account:
+    #         raise ValidationError(
+    #             {"details": "Transfers to the same account is not allowed"}
+    #         )
+    #     try:
+    #         with transaction.atomic():
+    #             transaction_instance = Transaction.objects.create(
+    #                 **validated_data,
+    #                 source_account=user_account,
+    #                 initiated_by=self.context["request"].user,
+    #                 status=TxStatus.PENDING,
+    #             )
+
+    #             TransactionMeta.objects.create(
+    #                 transaction=transaction_instance, **(meta_data or {})
+    #             )
+    #             return transaction_instance
+
+    #     except Exception as e:
+    #         raise ValidationError({"detail": f"Transfer failed: {str(e)}"})
+
+    # ---- External transfer (DEFENSIVE UNPACK) ----
+    def handle_external_transfer(self, validated_data, meta_data, user_account):
+        """Handle external transfers (wire/bank)."""
+        db_logger.info(f"meta_data {meta_data}")
+        ben_acct_raw = (meta_data.get("beneficiary_account_number") or "").strip()
+        print(f"[ExternalTransfer] beneficiary_account_number='{ben_acct_raw}'")
+
+        # Defensive: check_internal_account ALWAYS returns a tuple, but guard anyway.
+        result = self.check_internal_account(ben_acct_raw)
+        if not isinstance(result, (tuple, list)) or len(result) != 2:
+            print("[ExternalTransfer] Fallback: invalid result from check_internal_account -> treating as not found.")
+            acct_type, destination_account = (None, None)
+        else:
+            acct_type, destination_account = result
+
+        # Prevent same-account transfer if user accidentally provided own number
+        if destination_account and user_account.id == destination_account.id:
+            raise ValidationError({"detail": "Transfers to the same account are not allowed."})
+
+        # (Optional) Balance check for external transfer — choose the correct balance field
+        account_type = validated_data.pop("account_type", None)  # remove non-model field if still present
+        amount = validated_data.get("amount")
+        if account_type in ("savings", "checking"):
+            # lock & validate balance before creating tx
             with transaction.atomic():
-                transaction_instance = Transaction.objects.create(
-                    **validated_data,
-                    source_account=user_account,
+                ua_locked = Account.objects.select_for_update().get(pk=user_account.pk)
+                if account_type == "savings" and not (ua_locked.savings_balance > amount):
+                    raise ValidationError({"detail": "Insufficient funds in savings."})
+                if account_type == "checking" and not (ua_locked.checking_balance > amount):
+                    raise ValidationError({"detail": "Insufficient funds in checking."})
+
+                # create transaction (PENDING) and meta
+                tx = Transaction.objects.create(
+                    **{k: v for k, v in validated_data.items() if k not in ("account_pin",)},  # ensure no leaks
+                    source_account=ua_locked,
                     initiated_by=self.context["request"].user,
                     status=TxStatus.PENDING,
                 )
+                TransactionMeta.objects.create(transaction=tx, **(meta_data or {}))
+                print(f"[ExternalTransfer][OK] tx_id={tx.id} amount={amount}")
+                return tx
 
-                TransactionMeta.objects.create(
-                    transaction=transaction_instance, **(meta_data or {})
-                )
-                return transaction_instance
-
+        # If no account_type provided (API design), just create pending tx without balance check
+        try:
+            tx = Transaction.objects.create(
+                **{k: v for k, v in validated_data.items() if k not in ("account_pin",)},  # ensure no leaks
+                source_account=user_account,
+                initiated_by=self.context["request"].user,
+                status=TxStatus.PENDING,
+            )
+            TransactionMeta.objects.create(transaction=tx, **(meta_data or {}))
+            print(f"[ExternalTransfer][OK|NoBalanceCheck] tx_id={tx.id} amount={validated_data.get('amount')}")
+            return tx
         except Exception as e:
+            print(f"[ExternalTransfer][ERROR] {e}")
             raise ValidationError({"detail": f"Transfer failed: {str(e)}"})
-
 
 class TransactionSerializer(serializers.ModelSerializer):
 
