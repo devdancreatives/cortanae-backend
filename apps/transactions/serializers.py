@@ -287,7 +287,7 @@ class TransferSerializer(serializers.ModelSerializer):
             destination_account.save()
 
             account_pin = validated_data.pop("account_pin")
-            description = validated_data.pop("description", "")
+            # description = validated_data.pop("description", "")
 
             if not user_account.check_account_pin(account_pin):
                 raise ValidationError({"details": "Invalid account pin"})
