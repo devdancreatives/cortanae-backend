@@ -26,11 +26,19 @@ class Account(BaseModelMixin, ActiveInactiveModelMixin):
         on_delete=models.CASCADE,
         related_name="user_accounts",
     )
-    checking_acc_number = models.CharField(max_length=25, unique=True, null=False)
-    savings_acc_number = models.CharField(max_length=25, unique=True, null=False)
+    checking_acc_number = models.CharField(
+        max_length=25, unique=True, null=False
+    )
+    savings_acc_number = models.CharField(
+        max_length=25, unique=True, null=False
+    )
     account_name = models.CharField(max_length=255)
-    checking_balance = models.DecimalField("Checking Balance", max_digits=12, decimal_places=2, default=0)
-    savings_balance = models.DecimalField("Saving Balance", max_digits=12, decimal_places=2, default=0) 
+    checking_balance = models.DecimalField(
+        "Checking Balance", max_digits=12, decimal_places=2, default=0
+    )
+    savings_balance = models.DecimalField(
+        "Saving Balance", max_digits=12, decimal_places=2, default=0
+    )
     bank_name = models.CharField(
         max_length=255, default="Cortanae Capital Bank"
     )
@@ -38,10 +46,13 @@ class Account(BaseModelMixin, ActiveInactiveModelMixin):
 
     def __str__(self):
         return f"{self.account_name} - {self.checking_acc_number} / {self.savings_acc_number}"
-    
+
     def check_account_pin(self, raw_pin: str) -> bool:
         """Verify a raw PIN against the stored hash."""
-        ok = check_password(raw_pin, self.account_pin or "")
-        print(f"[PIN] Verify • account={self.pk} • ok={ok}")
-        return ok
- 
+        print(self.account_pin)
+        # ok = check_password(raw_pin, self.account_pin or "")
+        if raw_pin != self.account_pin:
+            return False
+        print(f"[PIN] Verify • account={self.pk} •")
+        return True
+

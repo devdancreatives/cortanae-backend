@@ -13,6 +13,7 @@ from typing import Union
 from apps.accounts.models import Account
 from apps.accounts.serializers import AccountSerializer
 
+
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(required=True)
@@ -33,7 +34,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             "last_name",
             "username",
             "phone_number",
-            "account_pin"
+            "account_pin",
         ]
 
     def validate(self, attrs):
@@ -53,30 +54,33 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         """Generate a unique 11-digit account number."""
         while True:
             account_number = str(random.randint(10**10, (10**11) - 1))
-            if not Account.objects.filter(
-                checking_acc_number=account_number
-            ).exists() and not Account.objects.filter(
-                savings_acc_number=account_number
-            ).exists():
+            if (
+                not Account.objects.filter(
+                    checking_acc_number=account_number
+                ).exists()
+                and not Account.objects.filter(
+                    savings_acc_number=account_number
+                ).exists()
+            ):
                 return account_number
-    
+
     def create(self, validated_data):
         email = validated_data.pop("email").lower()
         account_pin = validated_data.pop("account_pin")
         validated_data["email"] = email
-        
+
         checking_acc_number = self._generate_account_number()
         savings_acc_number = self._generate_account_number()
- 
+
         user = User.objects.create_user(**validated_data)
         Account.objects.create(
-           user=user,
-           account_name=user.full_name,
-           account_pin=account_pin,
-           savings_acc_number=savings_acc_number,
-           checking_acc_number=checking_acc_number,
+            user=user,
+            account_name=user.full_name,
+            account_pin=account_pin,
+            savings_acc_number=savings_acc_number,
+            checking_acc_number=checking_acc_number,
         )
-        
+
         return user
 
 
@@ -137,8 +141,15 @@ class UserInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        exclude = ('password', 'is_staff', 'date_joined', 'user_permissions', 'groups', 'is_superuser')
- 
+        exclude = (
+            "password",
+            "is_staff",
+            "date_joined",
+            "user_permissions",
+            "groups",
+            "is_superuser",
+        )
+
 
 class EmailAvailabilitySerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -195,26 +206,26 @@ class UserLoginSerializer(TokenObtainPairSerializer):
         if not user:
             raise ValidationError({"detail": "Invalid login credentials"})
 
-         # Default validation (checks password, issues tokens)
+        # Default validation (checks password, issues tokens)
         data = super().validate(attrs)
 
         # Attach serialized user data
         data["user"] = UserInfoSerializer(user).data
-        
+
         if hasattr(user, "user_accounts") and user.user_accounts:
             data["account"] = AccountSerializer(user.user_accounts).data
-        
+
         if hasattr(user, "kyc_profile") and user.kyc_profile:
             data["kyc_status"] = getattr(user.kyc_profile, "status", None)
         else:
-            data["kyc_status"] = None 
+            data["kyc_status"] = None
         return data
-
 
     @classmethod
     def get_token(cls, user: AuthUser) -> Token:
         token = super().get_token(user)
         return token
+
 
 class UserDetailsSerializer(serializers.ModelSerializer):
     account = AccountSerializer(source="user_accounts", read_only=True)
@@ -238,4 +249,4 @@ class UserDetailsSerializer(serializers.ModelSerializer):
 
     def get_kyc_status(self, obj):
         return getattr(getattr(obj, "kyc_profile", None), "status", None)
-    
+
