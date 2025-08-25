@@ -16,14 +16,14 @@ from rest_framework.generics import (
     CreateAPIView,
     UpdateAPIView,
     GenericAPIView,
-    RetrieveAPIView
+    RetrieveAPIView,
 )
 from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetSerializer,
     PasswordChangeSerializer,
     UserLoginSerializer,
-    UserDetailsSerializer
+    UserDetailsSerializer,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -103,10 +103,10 @@ class VerifyAccount(APIView):
 
         user.is_verified = True
         user.save()
-        
+
         token_instance.is_active = False
         token_instance.save()
-        
+
         return Response(
             {"detail": "Account verified successfully"}, status=200
         )
@@ -149,6 +149,7 @@ class PasswordResetView(CreateAPIView):
 class PasswordChangeView(UpdateAPIView):
     serializer_class = PasswordChangeSerializer
     permission_classes = [IsAuthenticated]
+    queryset = User.objects.all()
 
     def get_object(self):
         return self.request.user
@@ -164,14 +165,17 @@ class PasswordChangeView(UpdateAPIView):
             status=status.HTTP_200_OK,
         )
 
+
 class UserDetailsAPIView(RetrieveAPIView):
     """
     GET /api/user/me
     Returns the authenticated user's details with account and kyc status
     """
+
     serializer_class = UserDetailsSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
         # Always return the logged-in user
         return self.request.user
+

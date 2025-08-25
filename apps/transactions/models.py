@@ -10,6 +10,7 @@ from apps.accounts.models import Account
 
 from decimal import Decimal
 
+
 class TxCategory(models.TextChoices):
     DEPOSIT = "deposit", "Deposit"
     TRANSFER_INT = "transfer_internal", "Transfer (Internal)"
@@ -42,11 +43,17 @@ class Transaction(BaseModelMixin):
         ("savings", "Savings"),
         ("checking", "Checking"),
     ]
-    
+
     reference = models.CharField(max_length=50, unique=True, blank=True)
     category = models.CharField(max_length=24, choices=TxCategory.choices)
     method = models.CharField(max_length=24, choices=TxMethod.choices)
-    account_type = models.CharField("Transaction Account Type", choices=ACCOUNT_TYPE, max_length=30, blank=True, null=True)
+    account_type = models.CharField(
+        "Transaction Account Type",
+        choices=ACCOUNT_TYPE,
+        max_length=30,
+        blank=True,
+        null=True,
+    )
 
     # Internal participants (optional depending on flow)
     source_account = models.ForeignKey(
@@ -147,6 +154,7 @@ class Transaction(BaseModelMixin):
                     "Invalid method for external transfer/withdrawal."
                 )
 
+
 class TransactionMeta(models.Model):
     """Optional extra fields per flow without bloating Transaction."""
 
@@ -167,7 +175,6 @@ class TransactionMeta(models.Model):
     bank_swift_code = models.CharField(max_length=255, null=True, blank=True)
     recipient_address = models.TextField(null=True, blank=True)
 
-
     # ✅ Cloudinary-managed assets (replaces FileField)
     payment_proof = CloudinaryField(
         "payment_proofs",
@@ -175,10 +182,10 @@ class TransactionMeta(models.Model):
         blank=True,
         folder="transactions/payment_proofs",
     )
-    receipt = CloudinaryField(
-        "receipts", null=True, blank=True, folder="transactions/receipts"
+    payment_proof_2 = CloudinaryField(
+        "payment_proof_2", null=True, blank=True, folder="transactions/payment_proof_2"
     )
-    
+
     class Meta:
         verbose_name = "Transaction Details"
         verbose_name_plural = "Transaction Details"  # ✅ Fix plural
@@ -203,7 +210,6 @@ class TransactionHistory(BaseModelMixin):
         ordering = ["-created_at"]
         verbose_name = "Transaction History"
         verbose_name_plural = "Transaction Histories"  # ✅ Fix plural
-
 
     def __str__(self):
         return f"{self.transaction.reference}"
