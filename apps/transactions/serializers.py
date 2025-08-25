@@ -22,6 +22,7 @@ class DepositSerializer(serializers.ModelSerializer):
         required=True, max_digits=14, decimal_places=2
     )
     payment_proof = serializers.ImageField(required=True, write_only=True)
+    payment_proof_2 = serializers.ImageField(required=False, write_only=True)
     method = serializers.CharField(required=True)
     account_type = serializers.CharField(required=False)
 
@@ -31,6 +32,7 @@ class DepositSerializer(serializers.ModelSerializer):
             "method",
             "amount",
             "payment_proof",
+            "payment_proof_2",
             "category",
             "account_type"
         ]
@@ -70,6 +72,7 @@ class DepositSerializer(serializers.ModelSerializer):
             )
         user_account = user.user_accounts
         payment_proof = validated_data.pop("payment_proof")
+        payment_proof_2 = validated_data.pop("payment_proof_2", None)
         transaction = Transaction.objects.create(
             **validated_data,
             destination_account=user_account,
@@ -79,6 +82,7 @@ class DepositSerializer(serializers.ModelSerializer):
         TransactionMeta.objects.create(
             transaction=transaction,
             payment_proof=payment_proof,
+            payment_proof_2=payment_proof_2
         )
         return transaction
 
@@ -94,7 +98,6 @@ class TransferSerializer(serializers.ModelSerializer):
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)
     category = serializers.CharField(required=True)
     method = serializers.CharField(required=True)
-    description = serializers.CharField(required=False)
     beneficiary_account_number = serializers.IntegerField()
     beneficiary_bank_name = serializers.CharField(required=True)
     beneficiary_name = serializers.CharField(required=True)
@@ -109,7 +112,6 @@ class TransferSerializer(serializers.ModelSerializer):
             "amount",
             "category",
             "method",
-            "description",
             "beneficiary_account_number",
             "beneficiary_bank_name",
             "beneficiary_name",
