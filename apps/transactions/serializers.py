@@ -112,12 +112,6 @@ class TransferSerializer(serializers.ModelSerializer):
     category = serializers.CharField(required=True)
     method = serializers.CharField(required=True)
     meta = TransactionMetaSerializer()
-    beneficiary_account_number = serializers.IntegerField()
-    beneficiary_bank_name = serializers.CharField(required=True)
-    beneficiary_name = serializers.CharField(required=True)
-    bank_swift_code = serializers.CharField(required=False)
-    banking_routing_number = serializers.CharField(required=False)
-    recipient_address = serializers.CharField(required=False)
     account_type = serializers.CharField(required=True)
     account_pin = serializers.CharField(write_only=True, required=True)
 
@@ -128,13 +122,7 @@ class TransferSerializer(serializers.ModelSerializer):
             "amount",
             "category",
             "method",
-            "beneficiary_account_number",
-            "beneficiary_bank_name",
-            "beneficiary_name",
             "account_type",
-            "bank_swift_code",
-            "banking_routing_number",
-            "recipient_address",
             "account_pin",
             "account_type",
             "meta",
