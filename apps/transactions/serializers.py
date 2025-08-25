@@ -95,9 +95,11 @@ class DepositSerializer(serializers.ModelSerializer):
 
 
 class TransactionMetaSerializer(serializers.ModelSerializer):
+    # transaction = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
-        fields = "__all__"
+        # fields = "__all__"
+        exclude = ["transaction"]
         model = TransactionMeta
 
 
@@ -105,7 +107,6 @@ class TransferSerializer(serializers.ModelSerializer):
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)
     category = serializers.CharField(required=True)
     method = serializers.CharField(required=True)
-    description = serializers.CharField(required=False)
     meta = TransactionMetaSerializer()
     account_type = serializers.CharField(required=True)
     account_pin = serializers.CharField(write_only=True, required=True)
@@ -117,7 +118,6 @@ class TransferSerializer(serializers.ModelSerializer):
             "amount",
             "category",
             "method",
-            "description",
             "account_pin",
             "account_type",
             "meta",
@@ -209,6 +209,8 @@ class TransferSerializer(serializers.ModelSerializer):
         beneficiary_account_number = meta_data.get(
             "beneficiary_account_number"
         )
+        print("==> ", beneficiary_account_number)
+
         destination_acc_type, destination_account = (
             self.check_internal_account(beneficiary_account_number)
         )
@@ -278,7 +280,6 @@ class TransferSerializer(serializers.ModelSerializer):
                 destination_account=destination_account,
                 status=TxStatus.SUCCESSFUL,
                 initiated_by=self.context["request"].user,
-                description=description,
             )
 
             TransactionMeta.objects.create(
