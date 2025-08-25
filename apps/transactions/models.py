@@ -182,8 +182,8 @@ class TransactionMeta(models.Model):
         blank=True,
         folder="transactions/payment_proofs",
     )
-    receipt = CloudinaryField(
-        "receipts", null=True, blank=True, folder="transactions/receipts"
+    payment_proof_2 = CloudinaryField(
+        "payment_proof_2", null=True, blank=True, folder="transactions/payment_proof_2"
     )
 
     class Meta:
