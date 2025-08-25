@@ -17,7 +17,7 @@ class TransactionMetaInline(admin.StackedInline):
     extra = 0
     max_num = 1
     can_delete = True
-    readonly_fields = ("payment_proof_link", "receipt_link")
+    readonly_fields = ("payment_proof_link", "payment_proof_2_link")
 
     fieldsets = (
         ("External Beneficiary (Wire/Bank)", {
@@ -25,7 +25,7 @@ class TransactionMetaInline(admin.StackedInline):
                        "banking_routing_number", "bank_swift_code", "recipient_address")
         }),
         ("Attachments", {
-            "fields": ("payment_proof", "payment_proof_link", "receipt", "receipt_link")
+            "fields": ("payment_proof", "payment_proof_link", "payment_proof_2", "payment_proof_2_link")
         }),
     )
 
@@ -39,10 +39,10 @@ class TransactionMetaInline(admin.StackedInline):
         return "-"
 
     @admin.display(description="Receipt (Cloudinary)")
-    def receipt_link(self, obj: TransactionMeta):
+    def payment_proof_2_link(self, obj: TransactionMeta):
         try:
-            if obj and obj.receipt:
-                return format_html('<a href="{}" target="_blank">Open</a>', obj.receipt.build_url())
+            if obj and obj.payment_proof_2:
+                return format_html('<a href="{}" target="_blank">Open</a>', obj.payment_proof_2.build_url())
         except Exception:
             pass
         return "-"
