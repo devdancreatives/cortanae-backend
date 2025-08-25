@@ -40,7 +40,7 @@ class AccountAdmin(BaseStampedAdmin):
 
     fieldsets = (
         ("Owner", {"fields": ("user",)}),
-        ("Account Numbers", {"fields": ("checking_acc_number", "savings_acc_number")}),
+        ("Account Numbers", {"fields": ("checking_acc_number", "savings_acc_number", "account_pin", )}),
         ("Balances", {"fields": ("checking_balance", "savings_balance", "total_balance")}),
         ("Bank & Security", {"fields": ("bank_name",)}),
         ("Status & Timestamps", {"fields": ("is_active", "created_at", "updated_at")}),

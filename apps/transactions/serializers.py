@@ -99,12 +99,27 @@ class DepositSerializer(serializers.ModelSerializer):
 
 
 class TransactionMetaSerializer(serializers.ModelSerializer):
-    # transaction = serializers.PrimaryKeyRelatedField(read_only=True)
+    beneficiary_account_number = serializers.CharField(required=True, trim_whitespace=True)
+    beneficiary_bank_name = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    beneficiary_name = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    bank_swift_code = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    banking_routing_number = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    recipient_address = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
 
     class Meta:
-        # fields = "__all__"
-        exclude = ["transaction"]
         model = TransactionMeta
+        exclude = ["transaction"]
+
+    def validate_beneficiary_account_number(self, value: str) -> str:
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("Beneficiary account number is required.")
+        if not v.isdigit():
+            raise serializers.ValidationError("Beneficiary account number must be digits only.")
+        if not (8 <= len(v) <= 20):
+            raise serializers.ValidationError("Beneficiary account number must be 8–20 digits.")
+        print(f"[Meta.validate] beneficiary_account_number={v}")
+        return v
 
 
 class TransferSerializer(serializers.ModelSerializer):
@@ -112,7 +127,7 @@ class TransferSerializer(serializers.ModelSerializer):
     category = serializers.CharField(required=True)
     method = serializers.CharField(required=True)
     meta = TransactionMetaSerializer()
-    account_type = serializers.CharField(required=True)
+    account_type = serializers.ChoiceField(choices=(("savings", "savings"), ("checking", "checking")), required=True)
     account_pin = serializers.CharField(write_only=True, required=True)
 
     class Meta:
@@ -122,11 +137,18 @@ class TransferSerializer(serializers.ModelSerializer):
             "amount",
             "category",
             "method",
-            "account_type",
             "account_pin",
             "account_type",
             "meta",
         ]
+
+    def validate_account_pin(self, value: str) -> str:
+        pin = (value or "").strip()
+        if not pin.isdigit():
+            raise ValidationError("Account pin must be digits only.")
+        # Debug without exposing the PIN
+        print(f"[PIN] Provided PIN length={len(pin)} (masked)")
+        return pin
 
     def validate_amount(self, value):
         if value <= 0:
@@ -187,7 +209,7 @@ class TransferSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        meta_data = validated_data.pop("meta", None)
+        meta_data = validated_data.pop("meta")
         user = self.context["request"].user
 
         if not hasattr(user, "user_accounts"):
@@ -210,10 +232,13 @@ class TransferSerializer(serializers.ModelSerializer):
     def handle_internal_transfer(
         self, validated_data, meta_data, user_account
     ):
+        print("meta_data", meta_data)
         """function to handle internal transfers"""
         beneficiary_account_number = meta_data.get(
             "beneficiary_account_number"
         )
+       
+        
         print("==> ", beneficiary_account_number)
 
         destination_acc_type, destination_account = (
@@ -242,17 +267,11 @@ class TransferSerializer(serializers.ModelSerializer):
                 pk=destination_account.pk
             )
 
-            if (
-                account_type == "savings"
-                and user_account.savings_balance < amount
-            ):
-                raise ValidationError({"details": "Insufficient funds"})
-
-            if (
-                account_type == "checkings"
-                and user_account.checking_balance < amount
-            ):
-                raise ValidationError({"details": "Insufficient funds"})
+            # ✅ strict ">" checks (return 400, not 500)
+            if account_type == "savings" and not (user_account.savings_balance > amount):
+                raise serializers.ValidationError({"detail": "Insufficient funds in savings."})
+            if account_type == "checking" and not (user_account.checking_balance > amount):
+                raise serializers.ValidationError({"detail": "Insufficient funds in checking."})
 
             # debit sender
             if account_type == "savings":
@@ -339,7 +358,8 @@ class TransferSerializer(serializers.ModelSerializer):
         acct_type, destination_account = self.check_internal_account(
             meta_data.get("beneficiary_account_number")
         )
-
+        account_pin = validated_data.pop("account_pin")
+        
         if user_account == destination_account:
             raise ValidationError(
                 {"details": "Transfers to the same account is not allowed"}

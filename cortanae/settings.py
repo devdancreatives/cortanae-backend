@@ -52,6 +52,7 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "cloudinary",
     "cloudinary_storage",
+    'django_db_logger',
 ]
 
 # 3) Local (project) apps
@@ -214,3 +215,33 @@ CORS_ALLOWED_ORIGINS = [
     "https://cortanae-frontend.vercel.app"
     
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+        },
+        'simple': {
+            'format': '%(levelname)s %(asctime)s %(message)s'
+        },
+    },
+    'handlers': {
+        'db_log': {
+            'level': 'DEBUG',
+            'class': 'django_db_logger.db_log_handler.DatabaseLogHandler'
+        },
+    },
+    'loggers': {
+        'db': {
+            'handlers': ['db_log'],
+            'level': 'DEBUG'
+        },
+        'django.request': { # logging 500 errors to database
+            'handlers': ['db_log'],
+            'level': 'ERROR',
+            'propagate': False,
+        }
+    }
+}
