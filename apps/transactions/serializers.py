@@ -1,5 +1,5 @@
 from django.contrib.auth.models import update_last_login
-from django.forms import ValidationError
+from rest_framework.exceptions import ValidationError
 import datetime
 from django.db import transaction
 from django.views.generic import detail
