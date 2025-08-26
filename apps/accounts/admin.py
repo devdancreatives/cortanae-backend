@@ -63,7 +63,7 @@ class AccountAdmin(BaseStampedAdmin):
                 )
             },
         ),
-        ("Bank & Security", {"fields": ("bank_name",)}),
+        ("Bank & Security", {"fields": ("bank_name", "account_pin", )}),
         (
             "Status & Timestamps",
             {"fields": ("is_active", "created_at", "updated_at")},

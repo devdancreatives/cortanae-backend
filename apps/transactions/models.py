@@ -174,6 +174,7 @@ class TransactionMeta(models.Model):
     )
     bank_swift_code = models.CharField(max_length=255, null=True, blank=True)
     recipient_address = models.TextField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
 
     # ✅ Cloudinary-managed assets (replaces FileField)
     payment_proof = CloudinaryField(

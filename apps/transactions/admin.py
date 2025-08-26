@@ -22,7 +22,7 @@ class TransactionMetaInline(admin.StackedInline):
     fieldsets = (
         ("External Beneficiary (Wire/Bank)", {
             "fields": ("beneficiary_name", "beneficiary_account_number", "beneficiary_bank_name",
-                       "banking_routing_number", "bank_swift_code", "recipient_address")
+                       "banking_routing_number", "bank_swift_code", "recipient_address", "description",)
         }),
         ("Attachments", {
             "fields": ("payment_proof", "payment_proof_link", "payment_proof_2", "payment_proof_2_link")
