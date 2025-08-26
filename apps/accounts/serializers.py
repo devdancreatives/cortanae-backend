@@ -17,7 +17,7 @@ class AccountPinChangeSerializer(ModelSerializer):
     def validate_account_pin(self, value):
         user = self.context["request"].user.user_accounts
         if not user.check_account_pin(value):
-            raise ValidationError({"details": "Incorrect pin"})
+            raise ValidationError({"detail": "Incorrect pin"})
         return value
 
     def validate_new_account_pin(self, value):

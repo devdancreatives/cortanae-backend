@@ -47,7 +47,7 @@ class DepositSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise ValidationError(
                 {
-                    "details": "Amount to be deposited cannot be zero or less than zero"
+                    "detail": "Amount to be deposited cannot be zero or less than zero"
                 }
             )
         return value
@@ -56,7 +56,7 @@ class DepositSerializer(serializers.ModelSerializer):
         if value != TxCategory.DEPOSIT:
             raise ValidationError(
                 {
-                    "details": "Category must be deposit, for deposit transactions"
+                    "detail": "Category must be deposit, for deposit transactions"
                 }
             )
         return value
@@ -191,7 +191,7 @@ class TransferSerializer(serializers.ModelSerializer):
         if value not in valid_methods:
             raise ValidationError(
                 {
-                    "details": f"Method must be one of {', '.join(valid_methods)}"
+                    "detail": f"Method must be one of {', '.join(valid_methods)}"
                 }
             )
         return value
@@ -199,7 +199,7 @@ class TransferSerializer(serializers.ModelSerializer):
     def validate_category(self, value):
         valid_categories = [TxCategory.TRANSFER_EXT, TxCategory.TRANSFER_INT]
         if value not in valid_categories:
-            raise ValidationError({"details": "Transfers only allowed"})
+            raise ValidationError({"detail": "Transfers only allowed"})
         return value
 
     def validate(self, attrs):
@@ -210,13 +210,13 @@ class TransferSerializer(serializers.ModelSerializer):
 
         if category == TxCategory.TRANSFER_INT and method != TxMethod.INTERNAL:
             raise ValidationError(
-                {"details": 'Internal transfers must use "internal" method'}
+                {"detail": 'Internal transfers must use "internal" method'}
             )
 
         # External transfers cannot use internal method
         if category == TxCategory.TRANSFER_EXT and method == TxMethod.INTERNAL:
             raise ValidationError(
-                {"details": 'External transfers cannot use "internal" method'}
+                {"detail": 'External transfers cannot use "internal" method'}
             )
 
         # External transfers require beneficiary details
@@ -224,7 +224,7 @@ class TransferSerializer(serializers.ModelSerializer):
             if not meta_data.get("beneficiary_name"):
                 raise ValidationError(
                     {
-                        "details": "Beneficiary name is required for external transfers"
+                        "detail": "Beneficiary name is required for external transfers"
                     }
                 )
             if method in [TxMethod.BANK, TxMethod.WIRE] and not meta_data.get(
@@ -232,7 +232,7 @@ class TransferSerializer(serializers.ModelSerializer):
             ):
                 raise ValidationError(
                     {
-                        "details": "Bank name is required for bank/wire transfers"
+                        "detail": "Bank name is required for bank/wire transfers"
                     }
                 )
         return attrs
@@ -242,7 +242,7 @@ class TransferSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
 
         if not hasattr(user, "user_accounts"):
-            raise ValidationError({"details": "User does not have an account"})
+            raise ValidationError({"detail": "User does not have an account"})
 
         user_account = user.user_accounts
 
@@ -257,7 +257,7 @@ class TransferSerializer(serializers.ModelSerializer):
                 validated_data, meta_data, user_account
             )
         else:
-            raise ValidationError({"details": "Invalid transfer category"})
+            raise ValidationError({"detail": "Invalid transfer category"})
 
     def handle_internal_transfer(
         self, validated_data, meta_data, user_account
@@ -275,12 +275,12 @@ class TransferSerializer(serializers.ModelSerializer):
         if not destination_account:
             raise ValidationError(
                 {
-                    "details": "Beneficiary does not have an account with the bank"
+                    "detail": "Beneficiary does not have an account with the bank"
                 }
             )
         if user_account.id == destination_account.id:
             raise ValidationError(
-                {"details": "Cannot transfer to your own account"}
+                {"detail": "Cannot transfer to your own account"}
             )
 
         amount = validated_data.get("amount")
@@ -323,7 +323,7 @@ class TransferSerializer(serializers.ModelSerializer):
                 else:
                     destination_account.savings_balance += amount
             else:
-                raise ValidationError({"details": "Invalid account type"})
+                raise ValidationError({"detail": "Invalid account type"})
 
             user_account.save()
             destination_account.save()
@@ -332,7 +332,7 @@ class TransferSerializer(serializers.ModelSerializer):
             # description = validated_data.pop("description", "")
 
             if not user_account.check_account_pin(account_pin):
-                raise ValidationError({"details": "Invalid account pin"})
+                raise ValidationError({"detail": "Invalid account pin"})
 
             transaction_instance = Transaction.objects.create(
                 **validated_data,
@@ -397,7 +397,7 @@ class TransferSerializer(serializers.ModelSerializer):
 
     #     if user_account == destination_account:
     #         raise ValidationError(
-    #             {"details": "Transfers to the same account is not allowed"}
+    #             {"detail": "Transfers to the same account is not allowed"}
     #         )
     #     try:
     #         with transaction.atomic():
@@ -473,7 +473,7 @@ class TransferSerializer(serializers.ModelSerializer):
                 # confirm pin
                 account_pin = validated_data.pop("account_pin")
                 if not ua_locked.check_account_pin(account_pin):
-                    raise ValidationError({"details": "Incorrect PIN"})
+                    raise ValidationError({"detail": "Incorrect PIN"})
 
                 # create transaction (PENDING) and meta
                 if account_type == "savings":

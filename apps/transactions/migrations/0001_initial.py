@@ -218,8 +218,8 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "verbose_name": "Transaction Details",
-                "verbose_name_plural": "Transaction Details",
+                "verbose_name": "Transaction detail",
+                "verbose_name_plural": "Transaction detail",
             },
         ),
         migrations.AddIndex(
