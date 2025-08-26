@@ -4,17 +4,21 @@ from .models import Account
 
 class BaseStampedAdmin(admin.ModelAdmin):
     """Common admin for models inheriting BaseModelMixin (created_at/updated_at)."""
+
     readonly_fields = ("created_at", "updated_at")
     ordering = ("-created_at",)
 
     def save_model(self, request, obj, form, change):
-        print(f"[ADMIN] Saving {obj.__class__.__name__} pk={getattr(obj, 'pk', None)} by {request.user}")
+        print(
+            f"[ADMIN] Saving {obj.__class__.__name__} pk={getattr(obj, 'pk', None)} by {request.user}"
+        )
         super().save_model(request, obj, form, change)
 
 
 @admin.register(Account)
 class AccountAdmin(BaseStampedAdmin):
     """Simple, clear detail admin for Account."""
+
     list_display = (
         "id",
         "account_name",
@@ -40,10 +44,30 @@ class AccountAdmin(BaseStampedAdmin):
 
     fieldsets = (
         ("Owner", {"fields": ("user",)}),
-        ("Account Numbers", {"fields": ("checking_acc_number", "savings_acc_number", "account_pin", )}),
-        ("Balances", {"fields": ("checking_balance", "savings_balance", "total_balance")}),
+        (
+            "Account Numbers",
+            {
+                "fields": (
+                    "checking_acc_number",
+                    "savings_acc_number",
+                )
+            },
+        ),
+        (
+            "Balances",
+            {
+                "fields": (
+                    "checking_balance",
+                    "savings_balance",
+                    "total_balance",
+                )
+            },
+        ),
         ("Bank & Security", {"fields": ("bank_name",)}),
-        ("Status & Timestamps", {"fields": ("is_active", "created_at", "updated_at")}),
+        (
+            "Status & Timestamps",
+            {"fields": ("is_active", "created_at", "updated_at")},
+        ),
     )
 
     # expose computed total as readonly in form
@@ -62,10 +86,17 @@ class AccountAdmin(BaseStampedAdmin):
     # quick utilities with debug prints
     def reset_checking_balance(self, request, queryset):
         updated = queryset.update(checking_balance=0)
-        print(f"[ADMIN][Account] Reset checking_balance to 0 for {updated} record(s) by {request.user}")
+        print(
+            f"[ADMIN][Account] Reset checking_balance to 0 for {updated} record(s) by {request.user}"
+        )
+
     reset_checking_balance.short_description = "Reset checking balance to 0"
 
     def reset_savings_balance(self, request, queryset):
         updated = queryset.update(savings_balance=0)
-        print(f"[ADMIN][Account] Reset savings_balance to 0 for {updated} record(s) by {request.user}")
+        print(
+            f"[ADMIN][Account] Reset savings_balance to 0 for {updated} record(s) by {request.user}"
+        )
+
     reset_savings_balance.short_description = "Reset savings balance to 0"
+

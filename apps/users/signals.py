@@ -9,5 +9,4 @@ from .models import TokenValidator, User
 @receiver(post_save, sender=User)
 def send_account_verification_mail(sender, instance, created, **kwargs):
     if created:
-        print("The signal has been triggered")
         verification_mail(instance, "verify_account")
