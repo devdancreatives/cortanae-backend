@@ -122,6 +122,9 @@ class TransactionMetaSerializer(serializers.ModelSerializer):
     recipient_address = serializers.CharField(
         required=False, allow_blank=True, trim_whitespace=True
     )
+    description = serializers.CharField(
+        required=False, allow_blank=True
+    )
 
     class Meta:
         model = TransactionMeta
@@ -426,23 +429,23 @@ class TransferSerializer(serializers.ModelSerializer):
             f"[ExternalTransfer] beneficiary_account_number='{ben_acct_raw}'"
         )
 
-        # Defensive: check_internal_account ALWAYS returns a tuple, but guard anyway.
-        result = self.check_internal_account(
-            ben_acct_raw
-        )  # no need for this since it is an external transfer. instead check for the avvount the user wants to make the payment from
-        if not isinstance(result, (tuple, list)) or len(result) != 2:
-            print(
-                "[ExternalTransfer] Fallback: invalid result from check_internal_account -> treating as not found."
-            )
-            acct_type, destination_account = (None, None)
-        else:
-            acct_type, destination_account = result
+        # # Defensive: check_internal_account ALWAYS returns a tuple, but guard anyway.
+        # result = self.check_internal_account(
+        #     ben_acct_raw
+        # )  # no need for this since it is an external transfer. instead check for the avvount the user wants to make the payment from
+        # if not isinstance(result, (tuple, list)) or len(result) != 2:
+        #     print(
+        #         "[ExternalTransfer] Fallback: invalid result from check_internal_account -> treating as not found."
+        #     )
+        #     acct_type, destination_account = (None, None)
+        # else:
+        #     acct_type, destination_account = result
 
-        # Prevent same-account transfer if user accidentally provided own number
-        if destination_account and user_account.id == destination_account.id:
-            raise ValidationError(
-                {"detail": "Transfers to the same account are not allowed."}
-            )
+        # # Prevent same-account transfer if user accidentally provided own number
+        # if destination_account and user_account.id == destination_account.id:
+        #     raise ValidationError(
+        #         {"detail": "Transfers to the same account are not allowed."}
+        #     )
 
         # (Optional) Balance check for external transfer — choose the correct balance field
         account_type = validated_data.pop(
