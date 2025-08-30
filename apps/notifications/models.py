@@ -6,11 +6,13 @@ from cortanae.generic_utils.models_utils import BaseModelMixin
 
 User = get_user_model()
 
+
 class NotificationType(models.TextChoices):
-        TRANSACTION = "transaction", "Transaction"
-        SECURITY = "security", "Security"
-        SYSTEM = "system", "System"
-        PROMOTION = "promotion", "Promotion"
+    TRANSACTION = "transaction", "Transaction"
+    SECURITY = "security", "Security"
+    SYSTEM = "system", "System"
+    PROMOTION = "promotion", "Promotion"
+
 
 # Create your models here.
 class Notification(BaseModelMixin):
@@ -22,7 +24,9 @@ class Notification(BaseModelMixin):
         User, on_delete=models.CASCADE, related_name="my_notifications"
     )
     type = models.CharField(
-        choices=NotificationType.choices, default=NotificationType.choices
+        choices=NotificationType.choices,
+        default=NotificationType.choices,
+        max_length=30,
     )
 
     class Meta:

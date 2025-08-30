@@ -1,29 +1,40 @@
 from django.db import models
-from cortanae.generic_utils.account_verification import User
+from django.contrib.auth import get_user_model
+
 from cortanae.generic_utils.models_utils import BaseModelMixin
-from cloudinary.models import CloudinaryField
 
 
-class Message(BaseModelMixin):
-    content = models.TextField()
-    is_read = models.BooleanField(default=False)
+User = get_user_model()
 
+
+class Room(BaseModelMixin):
+    room_id = models.AutoField(primary_key=True)
     sender = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="sent_messages"
+        User, related_name="author", on_delete=models.CASCADE
     )
-    receiver = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="received_messages"
+    reciever = models.ForeignKey(
+        User, related_name="reciepent", on_delete=models.CASCADE
     )
-    media_file = CloudinaryField(
-        "attachment", resource_type="auto", null=True, blank=True
-    )
+    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.sender} → {self.receiver}: {self.content[:30]}"
+        return f"{self.room_id}-{self.sender}-{self.reciever}"
 
-    class Meta:
-        ordering = ["-created_at"]  # newest messages first
-        indexes = [
-            models.Index(fields=["sender", "receiver"]),
-            models.Index(fields=["is_read"]),
-        ]
+
+class Chat(BaseModelMixin):
+    room_id = models.ForeignKey(
+        Room, on_delete=models.CASCADE, related_name="chats"
+    )
+    sender = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="sender_msg"
+    )
+    reciever = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="friend_msg"
+    )
+    text = models.TextField()
+    slug = models.CharField(max_length=300, unique=True, blank=True, null=True)
+    date = models.DateTimeField(auto_now_add=True)
+    has_seen = models.BooleanField(default=False)
+
+    def __str__(self):
+        return "%s - %s" % (self.id, self.date)

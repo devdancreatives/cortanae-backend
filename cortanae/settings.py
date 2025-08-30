@@ -64,6 +64,7 @@ LOCAL_APPS = [
     "apps.accounts.apps.AccountsConfig",
     "apps.transactions.apps.TransactionsConfig",
     "apps.chat.apps.ChatConfig",
+    "apps.notifications.apps.NotificationsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
