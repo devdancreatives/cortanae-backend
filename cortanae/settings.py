@@ -48,6 +48,7 @@ DJANGO_APPS = [
 
 # 2) Third‑party apps
 THIRD_PARTY_APPS = [
+    "daphne",
     "channels",
     "rest_framework",
     "drf_spectacular",
