@@ -8,7 +8,6 @@ User = get_user_model()
 
 
 class Room(BaseModelMixin):
-    room_id = models.AutoField(primary_key=True)
     sender = models.ForeignKey(
         User, related_name="author", on_delete=models.CASCADE
     )
