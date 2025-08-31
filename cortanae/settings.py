@@ -43,12 +43,11 @@ DJANGO_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
-    
 ]
 
-# 2) Third‑party apps
+# 2) Third-party apps
 THIRD_PARTY_APPS = [
+    # ✅ Daphne must come before staticfiles
     "daphne",
     "channels",
     "rest_framework",
@@ -56,6 +55,8 @@ THIRD_PARTY_APPS = [
     "cloudinary",
     "cloudinary_storage",
     "django_db_logger",
+    # ⬇️ Now put staticfiles here
+    "django.contrib.staticfiles",
 ]
 
 # 3) Local (project) apps
