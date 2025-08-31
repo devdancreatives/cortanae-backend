@@ -44,6 +44,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    
 ]
 
 # 2) Third‑party apps
@@ -101,6 +102,8 @@ SIMPLE_JWT = {
 }
 
 ROOT_URLCONF = "cortanae.urls"
+
+ASGI_APPLICATION = "cortanae.asgi.application"  # adjust to your project pkg
 
 TEMPLATES = [
     {
