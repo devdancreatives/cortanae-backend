@@ -14,6 +14,18 @@ logger = logging.getLogger(__name__)
 """ DB Helpers """
 
 
+def _mark_seen_sync(slug: str):
+    try:
+        chat = Chat.objects.get(slug=slug)
+        chat.has_seen = True
+        chat.save(update_fields=["has_seen"])
+        return chat
+    except Chat.DoesNotExist:
+        logger.warning(f"[WS][SEEN] Message with slug {slug} not found")
+
+mark_seen = sync_to_async(_mark_seen_sync, thread_sensitive=False)
+
+
 def create_new_message_sync(sender_id, receiver_id, message, room_id, slug):
     print("sender_id", sender_id)
     print("receiver_id", receiver_id)
@@ -22,25 +34,19 @@ def create_new_message_sync(sender_id, receiver_id, message, room_id, slug):
         sender = User.objects.get(id=sender_id)
         receiver = User.objects.get(id=receiver_id)
 
-        try:
-            chat = Chat.objects.create(
-                room_id=room,
-                slug=slug,
-                sender=sender,
-                reciever=receiver,
-                text=message,
-            )
-        except IntegrityError:
-            # 🔁 slug already exists → generate a new one
-            new_slug = str(uuid.uuid4())
-            chat = Chat.objects.create(
-                room_id=room,
-                slug=new_slug,
-                sender=sender,
-                reciever=receiver,
-                text=message,
-            )
-
+        if slug:
+            existing = Chat.objects.filter(slug=slug).first()
+            if existing:
+                print(f"[DB] slug already exists; returning existing id={existing.id}")
+                return existing
+            
+        chat = Chat.objects.create(
+            room_id=room,
+            slug=slug,
+            sender=sender,
+            reciever=receiver,
+            text=message,
+        )
         return chat
 
     except Room.DoesNotExist:
@@ -53,7 +59,7 @@ def create_new_message_sync(sender_id, receiver_id, message, room_id, slug):
         logger.exception(f"Unexpected error creating message: {e}")
 
 
-create_new_message = sync_to_async(
+create_message = sync_to_async(
     create_new_message_sync, thread_sensitive=False
 )
 
@@ -104,42 +110,56 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
         text = data["text"]
         date = data.get("date")
         read_receipt = data.get("read_receipt")
+        if read_receipt:
+            # Handle receipts separately (no DB save loop)
+            await mark_seen(slug=slug)
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "broadcast_message",
+                    "event": "read_receipt",
+                    "slug": slug,
+                    "sender": sender_id,
+                    "receiver": receiver_id,
+                    "has_seen": True,
+                    "date": date,
+                },
+            )
+            return
 
+        if not receiver_id or not text:
+            print("[WS][VALIDATION] Missing receiver or empty text")
+            return
+
+        # 🛑 FIX: Save once here (only sender's consumer runs `receive`)
+        try:
+            await create_message(
+                sender_id=sender_id,
+                receiver_id=receiver_id,
+                message=text,
+                room_id=self.room_name,
+                slug=slug,
+            )
+        except Exception:
+            # Already logged in helper
+            return
+
+        # 📣 Single one-way broadcast to group (no second DB write)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                "type": "chatroom_message",
+                "type": "broadcast_message",
+                "event": "new_message",
                 "text": text,
                 "receiver": receiver_id,
                 "sender": sender_id,
                 "slug": slug,
                 "date": date,
-                "read_receipt": read_receipt,
+                "has_seen": False,
             },
         )
 
-    async def chatroom_message(self, event):
-        if not event["read_receipt"]:
-            await create_new_message(
-                sender_id=event["sender"],
-                receiver_id=event["receiver"],
-                message=event["text"],
-                room_id=self.room_name,
-                slug=event["slug"],
-            )
-
-        else:
-            await handle_update_status(slug=event["slug"])
-
-        # Broadcast back to all group members
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "broadcast_message",
-                **event,
-                "has_seen": bool(event["read_receipt"]),
-            },
-        )
-
+    # 🔊 Group fan-out: pure broadcast — NO DB writes here
     async def broadcast_message(self, event):
         await self.send(text_data=json.dumps(event))
+        print(f"[WS][SEND] {event.get('event')} slug={event.get('slug')} to {self.channel_name}")
