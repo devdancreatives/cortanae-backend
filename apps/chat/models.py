@@ -17,8 +17,9 @@ class Room(BaseModelMixin):
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.room_id}-{self.sender}-{self.reciever}"
+        return f"{self.id}-{self.sender}-{self.reciever}"
 
+    
 
 class Chat(BaseModelMixin):
     room_id = models.ForeignKey(

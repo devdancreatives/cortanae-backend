@@ -1,4 +1,5 @@
 import json
+import uuid
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
@@ -14,18 +15,32 @@ logger = logging.getLogger(__name__)
 
 
 def create_new_message_sync(sender_id, receiver_id, message, room_id, slug):
+    print("sender_id", sender_id)
+    print("receiver_id", receiver_id)
     try:
-        room = Room.objects.get(room_id=room_id)
+        room = Room.objects.get(id=room_id)
         sender = User.objects.get(id=sender_id)
         receiver = User.objects.get(id=receiver_id)
 
-        chat = Chat.objects.create(
-            room_id=room,
-            slug=slug,
-            sender=sender,
-            reciever=receiver,
-            text=message,
-        )
+        try:
+            chat = Chat.objects.create(
+                room_id=room,
+                slug=slug,
+                sender=sender,
+                reciever=receiver,
+                text=message,
+            )
+        except IntegrityError:
+            # 🔁 slug already exists → generate a new one
+            new_slug = str(uuid.uuid4())
+            chat = Chat.objects.create(
+                room_id=room,
+                slug=new_slug,
+                sender=sender,
+                reciever=receiver,
+                text=message,
+            )
+
         return chat
 
     except Room.DoesNotExist:
@@ -80,11 +95,11 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        logger.debug(f"Received data: {data}")
+        print("Received data", data)
 
         # 🚨 Always use scope user for sender (security)
-        sender_id = self.scope["user"].id
-        receiver_id = int(data["receiver"])
+        sender_id = data["sender"]['id']
+        receiver_id = data["receiver"]
         slug = data["slug"]
         text = data["text"]
         date = data.get("date")

@@ -4,17 +4,29 @@ from apps.users.serializers import UserSerializer
 
 
 class RoomSerializer(serializers.ModelSerializer):
-    sender = UserSerializer()
-    reciever = UserSerializer()
+    sender = UserSerializer(read_only=True)
+    reciever = UserSerializer(read_only=True)
+    room_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Room
-        fields = "__all__"
+        fields = (
+            "room_id",
+            "sender",
+            "reciever",
+            # add the rest of your Room model fields explicitly
+            "created_at",
+            "updated_at",
+            # e.g. "name", "last_message", etc.
+        )
+
+    def get_room_id(self, obj):
+        return obj.id
 
 
 class ChatSerializer(serializers.ModelSerializer):
-    sender = UserSerializer()
-    reciever = UserSerializer()
+    sender = UserSerializer(read_only=True)
+    reciever = UserSerializer(read_only=True)
 
     class Meta:
         model = Chat

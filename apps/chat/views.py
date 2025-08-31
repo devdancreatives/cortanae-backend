@@ -29,7 +29,7 @@ class RoomAPIView(APIView):
 
     def get(self, request, room_id, receiver_id, *args, **kwargs):
         try:
-            room_instance = Room.objects.get(room_id=room_id)
+            room_instance = Room.objects.get(id=room_id)
         except Room.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -79,7 +79,7 @@ class UpdateHasSeenAPIView(APIView):
     def post(self, request, room_id, receiver_id):
         try:
             try:
-                room_instance = Room.objects.get(room_id=room_id)
+                room_instance = Room.objects.get(id=room_id)
             except Room.DoesNotExist:
                 return Response(status=status.HTTP_404_NOT_FOUND)
 

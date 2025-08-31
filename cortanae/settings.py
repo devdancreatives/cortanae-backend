@@ -47,8 +47,8 @@ DJANGO_APPS = [
 
 # 2) Third-party apps
 THIRD_PARTY_APPS = [
-    # ✅ Daphne must come before staticfiles
-    "daphne",
+    # # ✅ Daphne must come before staticfiles
+    # "daphne",
     "channels",
     "rest_framework",
     "drf_spectacular",
@@ -71,7 +71,6 @@ LOCAL_APPS = [
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
-ASGI_APPLICATION = "cortanae.asgi.application"
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -218,6 +217,7 @@ MEDIA_URL = "/media/"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
     "https://cortanae.com",
     "https://cortanae-frontend.vercel.app"
     
@@ -246,4 +246,10 @@ LOGGING = {
             "propagate": False,
         },
     },
+}
+
+ASGI_APPLICATION = "cortanae.routing.application"
+
+CHANNEL_LAYERS = {
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
 }
