@@ -14,6 +14,12 @@ from apps.accounts.models import Account
 from apps.accounts.serializers import AccountSerializer
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = "__all__"
+
+
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(required=True)
@@ -249,4 +255,3 @@ class UserDetailsSerializer(serializers.ModelSerializer):
 
     def get_kyc_status(self, obj):
         return getattr(getattr(obj, "kyc_profile", None), "status", None)
-
