@@ -258,6 +258,7 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             "country",
             "is_verified",
             "full_name",
+            "is_staff",
             "account",
             "kyc_status",
         )
