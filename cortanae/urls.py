@@ -25,4 +25,5 @@ urlpatterns = [
         name="redoc",
     ),
     path("api/", include("apps.accounts.urls")),
+    path("api/chats/", include("apps.chat.urls")),
 ]

@@ -43,16 +43,20 @@ DJANGO_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
 ]
 
-# 2) Third‑party apps
+# 2) Third-party apps
 THIRD_PARTY_APPS = [
+    # # ✅ Daphne must come before staticfiles
+    # "daphne",
+    "channels",
     "rest_framework",
     "drf_spectacular",
     "cloudinary",
     "cloudinary_storage",
-    'django_db_logger',
+    "django_db_logger",
+    # ⬇️ Now put staticfiles here
+    "django.contrib.staticfiles",
 ]
 
 # 3) Local (project) apps
@@ -62,9 +66,11 @@ LOCAL_APPS = [
     "apps.notifications.apps.NotificationsConfig",
     "apps.accounts.apps.AccountsConfig",
     "apps.transactions.apps.TransactionsConfig",
+    "apps.chat.apps.ChatConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -88,15 +94,16 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=180),   # 6 months
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=180),  # 6 months
     "REFRESH_TOKEN_LIFETIME": timedelta(days=180),  # 6 months
-
     # Optional secure settings
     # "ROTATE_REFRESH_TOKENS": True,
     # "BLACKLIST_AFTER_ROTATION": True,
 }
 
 ROOT_URLCONF = "cortanae.urls"
+
+ASGI_APPLICATION = "cortanae.asgi.application"  # adjust to your project pkg
 
 TEMPLATES = [
     {
@@ -114,7 +121,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "cortanae.wsgi.application"
+# WSGI_APPLICATION = "cortanae.wsgi.application"
 
 
 # Database
@@ -137,7 +144,6 @@ else:
             "PORT": config("POSTGRES_PORT", cast=int),
         }
     }
-
 
 
 # Password validation
@@ -199,7 +205,6 @@ else:
     EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 
 
-# Minimal Cloudinary config
 CLOUDINARY = {
     "cloud_name": config("CLOUDINARY_CLOUD_NAME"),
     "api_key": config("CLOUDINARY_API_KEY"),
@@ -210,38 +215,44 @@ DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 MEDIA_URL = "/media/"
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", 
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "https://cortanae.com",
     "https://cortanae-frontend.vercel.app"
     
 ]
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s"
         },
-        'simple': {
-            'format': '%(levelname)s %(asctime)s %(message)s'
+        "simple": {"format": "%(levelname)s %(asctime)s %(message)s"},
+    },
+    "handlers": {
+        "db_log": {
+            "level": "DEBUG",
+            "class": "django_db_logger.db_log_handler.DatabaseLogHandler",
         },
     },
-    'handlers': {
-        'db_log': {
-            'level': 'DEBUG',
-            'class': 'django_db_logger.db_log_handler.DatabaseLogHandler'
+    "loggers": {
+        "db": {"handlers": ["db_log"], "level": "DEBUG"},
+        "django.request": {  # logging 500 errors to database
+            "handlers": ["db_log"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
-    'loggers': {
-        'db': {
-            'handlers': ['db_log'],
-            'level': 'DEBUG'
-        },
-        'django.request': { # logging 500 errors to database
-            'handlers': ['db_log'],
-            'level': 'ERROR',
-            'propagate': False,
+}
+
+ASGI_APPLICATION = "cortanae.asgi.application"
+
+CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
         }
     }
-}
