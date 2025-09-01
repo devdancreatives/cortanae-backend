@@ -86,13 +86,15 @@ handle_update_status = sync_to_async(
 
 class ChatRoomConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
-        self.room_group_name = f"chat_{self.room_name}"
-
-        await self.channel_layer.group_add(
-            self.room_group_name, self.channel_name
-        )
-        await self.accept()
+        try:
+            self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
+            self.room_group_name = f"chat_{self.room_name}"
+            await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+            await self.accept()
+        except Exception as e:
+            print(f"[WS] connect error: {e}")
+            logger.exception("[WS] connect error: %s", e)
+            await self.close()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
