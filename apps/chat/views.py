@@ -10,10 +10,35 @@ from rest_framework.views import APIView
 from apps.users.models import User
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes, OpenApiExample ,OpenApiResponse
 
 
 class RoomListAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        tags=["Chat"],
+        summary="List my chat rooms",
+        description="Returns all rooms where the authenticated user is either the sender or the receiver.",
+        responses=OpenApiResponse(
+            response=RoomSerializer(many=True),
+            examples=[
+                OpenApiExample(
+                    name="RoomsExample",
+                    summary="Typical list response",
+                    value=[
+                        {
+                            "room_id": "e7f9b554-0f0d-3dbd-e8b1-ae226206aa67",
+                            "sender": {"id": "e7f9b554-0f0d-3dbd-e8b1-ae226206aa67", "first_name": "Tester", "last_name": ""},
+                            "reciever": {"id": "e7f9b554-0f0d-3dbd-e8b1-ae226206aa67", "first_name": "Admin", "last_name": ""},
+                            "created": "2025-08-20T13:00:00Z",
+                            "updated": "2025-08-28T20:40:12Z"
+                        }
+                    ]
+                )
+            ],
+        ),
+    )
 
     def get(self, request, *args, **kwargs):
         all_rooms = Room.objects.filter(
@@ -58,8 +83,18 @@ class GetORCreateChatRoomView(APIView):
         """
         qs = User.objects.filter(is_active=True, is_staff=True).exclude(id=request.user.id)
         return qs
-
-    def posr(self, request, *args, **kwargs):
+    
+    @extend_schema(
+        tags=["Chat"],
+        summary="Create or get a room with an admin",
+        description="Creates a chat room with the first available admin (or the one you pass via admin_id) and returns it.",
+        parameters=[
+            OpenApiParameter(name="admin_id", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False),
+        ],
+        responses={200: RoomSerializer, 201: RoomSerializer, 404: OpenApiTypes.OBJECT},
+    )
+    
+    def post(self, request, *args, **kwargs):
         admins = self._admin_qs(request)
         reciever = admins.order_by("id").first()
         if not reciever:
