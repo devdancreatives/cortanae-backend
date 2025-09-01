@@ -30,7 +30,7 @@ class RoomListAPIView(APIView):
                         {
                             "room_id": "e7f9b554-0f0d-3dbd-e8b1-ae226206aa67",
                             "sender": {"id": "e7f9b554-0f0d-3dbd-e8b1-ae226206aa67", "first_name": "Tester", "last_name": ""},
-                            "reciever": {"id": "e7f9b554-0f0d-3dbd-e8b1-ae226206aa67", "first_name": "Admin", "last_name": ""},
+                            "receiver": {"id": "e7f9b554-0f0d-3dbd-e8b1-ae226206aa67", "first_name": "Admin", "last_name": ""},
                             "created": "2025-08-20T13:00:00Z",
                             "updated": "2025-08-28T20:40:12Z"
                         }
@@ -42,7 +42,7 @@ class RoomListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         all_rooms = Room.objects.filter(
-            Q(sender=request.user) | Q(reciever=request.user)
+            Q(sender=request.user) | Q(receiver=request.user)
         ).order_by("-created")
 
         serializer = RoomSerializer(all_rooms, many=True)
@@ -65,7 +65,7 @@ class RoomAPIView(APIView):
         context = {
             "old_chats": chat_serializer.data,
             "my_name": request.user.first_name,
-            "reciever_name": get_object_or_404(
+            "receiver_name": get_object_or_404(
                 User, pk=receiver_id
             ).first_name,
             "room_id": room_id,
@@ -96,8 +96,8 @@ class GetORCreateChatRoomView(APIView):
     
     def post(self, request, *args, **kwargs):
         admins = self._admin_qs(request)
-        reciever = admins.order_by("id").first()
-        if not reciever:
+        receiver = admins.order_by("id").first()
+        if not receiver:
             return Response(
                 {"detail": "No admin users available."},
                 status=status.HTTP_404_NOT_FOUND,
@@ -105,12 +105,12 @@ class GetORCreateChatRoomView(APIView):
 
         # Find existing room between the two users (in either direction)
         room = Room.objects.filter(
-            Q(sender=request.user, reciever=reciever) |
-            Q(sender=reciever, reciever=request.user)
+            Q(sender=request.user, receiver=receiver) |
+            Q(sender=receiver, receiver=request.user)
         ).first()
 
         if not room:
-            room = Room.objects.create(sender=request.user, reciever=reciever)
+            room = Room.objects.create(sender=request.user, receiver=receiver)
 
         serializer = RoomSerializer(room, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -135,14 +135,14 @@ class UpdateHasSeenAPIView(APIView):
                 room_id=room_instance, has_seen=False
             ).order_by("-date")
             receiver_chats = chats.filter(
-                Q(sender=receiver_id) | Q(reciever=receiver_id)
+                Q(sender=receiver_id) | Q(receiver=receiver_id)
             )
             print("receiver_chats", receiver_chats)
             for chat in receiver_chats:
                 message = {
                     "type": "chatroom_message",
                     "text": chat.text,
-                    "receiver": chat.reciever.id,
+                    "receiver": chat.receiver.id,
                     "date": chat.date.isoformat(),
                     "has_seen": chat.has_seen,
                     "sender": chat.sender.id,

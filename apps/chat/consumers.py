@@ -44,7 +44,7 @@ def create_new_message_sync(sender_id, receiver_id, message, room_id, slug):
             room_id=room,
             slug=slug,
             sender=sender,
-            reciever=receiver,
+            receiver=receiver,
             text=message,
         )
         return chat

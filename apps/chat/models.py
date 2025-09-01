@@ -11,13 +11,13 @@ class Room(BaseModelMixin):
     sender = models.ForeignKey(
         User, related_name="author", on_delete=models.CASCADE
     )
-    reciever = models.ForeignKey(
+    receiver = models.ForeignKey(
         User, related_name="reciepent", on_delete=models.CASCADE
     )
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.id}-{self.sender}-{self.reciever}"
+        return f"{self.id}-{self.sender}-{self.receiver}"
 
     
 
@@ -28,7 +28,7 @@ class Chat(BaseModelMixin):
     sender = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="sender_msg"
     )
-    reciever = models.ForeignKey(
+    receiver = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="friend_msg"
     )
     text = models.TextField()

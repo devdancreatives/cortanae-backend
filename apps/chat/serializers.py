@@ -5,7 +5,7 @@ from apps.users.serializers import UserSerializer
 
 class RoomSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
-    reciever = UserSerializer(read_only=True)
+    receiver = UserSerializer(read_only=True)
     room_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -13,7 +13,7 @@ class RoomSerializer(serializers.ModelSerializer):
         fields = (
             "room_id",
             "sender",
-            "reciever",
+            "receiver",
             # add the rest of your Room model fields explicitly
             "created_at",
             "updated_at",
@@ -26,7 +26,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
 class ChatSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
-    reciever = UserSerializer(read_only=True)
+    receiver = UserSerializer(read_only=True)
 
     class Meta:
         model = Chat

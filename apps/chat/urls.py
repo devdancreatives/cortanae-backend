@@ -6,7 +6,7 @@ urlpatterns = [
     path(
         "create_room/",
         views.GetORCreateChatRoomView.as_view(),
-        name="api-reciever-id",
+        name="api-receiver-id",
     ),
     path(
         "room/<uuid:room_id>/<uuid:receiver_id>/",
