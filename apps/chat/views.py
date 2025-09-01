@@ -48,29 +48,38 @@ class RoomAPIView(APIView):
         return Response(context, status=status.HTTP_200_OK)
 
 
-class RoomChoiceView(APIView):
+class GetORCreateChatRoomView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, reciever_id, *args, **kwargs):
+    def _admin_qs(self, request):
+        """
+        Define what 'admin' means for your app.
+        Option A: built-in staff flag (most common).
+        """
+        qs = User.objects.filter(is_active=True, is_staff=True).exclude(id=request.user.id)
+        return qs
 
-        try:
-            reciever = User.objects.get(id=reciever_id)
-        except User.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+    def posr(self, request, *args, **kwargs):
+        admins = self._admin_qs(request)
+        reciever = admins.order_by("id").first()
+        if not reciever:
+            return Response(
+                {"detail": "No admin users available."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
+        # Find existing room between the two users (in either direction)
         room = Room.objects.filter(
-            Q(sender=request.user, reciever=reciever)
-            | Q(sender=reciever, reciever=request.user)
+            Q(sender=request.user, reciever=reciever) |
+            Q(sender=reciever, reciever=request.user)
         ).first()
 
         if not room:
             room = Room.objects.create(sender=request.user, reciever=reciever)
-            room.save()
-            serializer = RoomSerializer(room, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
 
         serializer = RoomSerializer(room, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 class UpdateHasSeenAPIView(APIView):

@@ -4,8 +4,8 @@ from . import views
 urlpatterns = [
     path("", views.RoomListAPIView.as_view(), name="api-room-list"),
     path(
-        "create_room/<uuid:reciever_id>/",
-        views.RoomChoiceView.as_view(),
+        "create_room/",
+        views.GetORCreateChatRoomView.as_view(),
         name="api-reciever-id",
     ),
     path(
