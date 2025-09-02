@@ -50,6 +50,7 @@ THIRD_PARTY_APPS = [
     # # ✅ Daphne must come before staticfiles
     # "daphne",
     "channels",
+    "uvicorn",
     "rest_framework",
     "drf_spectacular",
     "cloudinary",
@@ -219,8 +220,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "https://cortanae.com",
-    "https://cortanae-frontend.vercel.app"
-    
+    "https://cortanae-frontend.vercel.app",
 ]
 
 LOGGING = {
@@ -251,8 +251,8 @@ LOGGING = {
 ASGI_APPLICATION = "cortanae.asgi.application"
 
 CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
-        }
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
     }
+}
