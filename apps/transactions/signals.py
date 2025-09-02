@@ -10,6 +10,9 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import F
 
+from apps.notifications.models import NotificationType
+from apps.notifications.service.notification_service import send_notification
+
 from .models import Transaction, TransactionHistory, TxCategory, TxStatus
 
 
@@ -26,7 +29,6 @@ def store_old_transaction_state(sender, instance, **kwargs):
         instance._old_values = {}
 
 
-
 @receiver(pre_save, sender=Transaction)
 def create_transaction_reference(sender, instance, **kwargs):
     """Generate a unique uppercase reference if missing."""
@@ -41,7 +43,7 @@ def create_transaction_reference(sender, instance, **kwargs):
 
     instance.reference = ref
     print(f"[SIGNAL] Generated Transaction reference={instance.reference}")
-    
+
 
 @receiver(post_save, sender=Transaction)
 def create_transaction_history(sender, instance, created, **kwargs):
@@ -51,14 +53,15 @@ def create_transaction_history(sender, instance, created, **kwargs):
         )
 
 
-
 def _is_success_status(status: str) -> bool:
     # Support legacy "successful" alongside enum COMPLETED
     return status in {TxStatus.SUCCESSFUL, "successful"}
 
 
 @receiver(post_save, sender=Transaction)
-def credit_account_on_successful_deposit(sender, instance: Transaction, created: bool, **kwargs):
+def credit_account_on_successful_deposit(
+    sender, instance: Transaction, created: bool, **kwargs
+):
     """
     When a Transaction is a DEPOSIT and status is successful/completed,
     credit the destination account once. If a history row already exists,
@@ -80,9 +83,13 @@ def credit_account_on_successful_deposit(sender, instance: Transaction, created:
         return
 
     # Idempotency: only skip if we've already posted credit for THIS tx
-    already_credited = instance.history.filter(metadata__credit_posted=True).exists()
+    already_credited = instance.history.filter(
+        metadata__credit_posted=True
+    ).exists()
     if already_credited:
-        print(f"[SIG] Credit already posted • ref={instance.reference} • skipping.")
+        print(
+            f"[SIG] Credit already posted • ref={instance.reference} • skipping."
+        )
         return
 
     amt: Decimal = instance.amount
@@ -91,8 +98,7 @@ def credit_account_on_successful_deposit(sender, instance: Transaction, created:
         # Lock account to avoid race conditions
         acct = (
             type(instance.destination_account)
-            .objects
-            .select_for_update()
+            .objects.select_for_update()
             .get(pk=instance.destination_account_id)
         )
 
@@ -100,27 +106,35 @@ def credit_account_on_successful_deposit(sender, instance: Transaction, created:
             type(acct).objects.filter(pk=acct.pk).update(
                 savings_balance=F("savings_balance") + amt
             )
-            new_balance = type(acct).objects.values_list("savings_balance", flat=True).get(pk=acct.pk)
+            new_balance = (
+                type(acct)
+                .objects.values_list("savings_balance", flat=True)
+                .get(pk=acct.pk)
+            )
             acc_label = "SAVINGS"
         elif instance.account_type == "checking":
             type(acct).objects.filter(pk=acct.pk).update(
                 checking_balance=F("checking_balance") + amt
             )
-            new_balance = type(acct).objects.values_list("checking_balance", flat=True).get(pk=acct.pk)
+            new_balance = (
+                type(acct)
+                .objects.values_list("checking_balance", flat=True)
+                .get(pk=acct.pk)
+            )
             acc_label = "CHECKING"
         else:
-            print(f"[SIG] Unknown account_type='{instance.account_type}'; skipping credit.")
+            print(
+                f"[SIG] Unknown account_type='{instance.account_type}'; skipping credit."
+            )
             return
 
-        print(f"[SIG] Credited {acc_label} {amt} • new_balance={new_balance} • ref={instance.reference}")
+        print(
+            f"[SIG] Credited {acc_label} {amt} • new_balance={new_balance} • ref={instance.reference}"
+        )
 
         # ---- Upsert a history entry instead of always creating a new one ----
         # Prefer updating an existing 'details_update' row if present
-        hist = (
-            instance.history
-            .order_by("created_at")
-            .first()
-        )
+        hist = instance.history.order_by("created_at").first()
 
         meta_patch = {
             "credit_posted": True,
@@ -134,9 +148,32 @@ def credit_account_on_successful_deposit(sender, instance: Transaction, created:
             metadata = dict(hist.metadata or {})
             metadata.update(meta_patch)
             hist.metadata = metadata
-            hist.note = f"{(hist.note or '').strip()} • {note_patch}".strip(" •")
+            hist.note = f"{(hist.note or '').strip()} • {note_patch}".strip(
+                " •"
+            )
             hist.save(update_fields=["metadata", "note", "updated_at"])
-            print(f"[SIG] Updated existing history • id={hist.id} • ref={instance.reference}")
+            content = f"{amt} has been credited into your {acc_label} account. New balance: {new_balance}"
+            mail_options = (
+                {
+                    "to": instance.destination_account.user.email,
+                    "subject": "Deposit Successful",
+                    "body": content,
+                }
+                if instance.destination_account.user.email_notifications
+                else None
+            )
+
+            send_notification(
+                user=instance.destination_account.user,
+                content=content,
+                title="Deposit Successful",
+                type=NotificationType.TRANSACTION,
+                mail_options=mail_options,
+            )
+
+            print(
+                f"[SIG] Updated existing history • id={hist.id} • ref={instance.reference}"
+            )
         else:
             # Create a single clear row for this side-effect
             TransactionHistory.objects.create(
@@ -144,4 +181,25 @@ def credit_account_on_successful_deposit(sender, instance: Transaction, created:
                 metadata=meta_patch,
                 note=note_patch,
             )
-            print(f"[SIG] Created history (credit marker) • ref={instance.reference}")
+
+            content = f"{amt} has been credited into your {acc_label} account. New balance: {new_balance}"
+            mail_options = (
+                {
+                    "to": instance.destination_account.user.email,
+                    "subject": "Deposit Successful",
+                    "body": content,
+                }
+                if instance.destination_account.user.email_notifications
+                else None
+            )
+
+            send_notification(
+                user=instance.destination_account.user,
+                content=content,
+                title="Deposit Successful",
+                type=NotificationType.TRANSACTION,
+                mail_options=mail_options,
+            )
+            print(
+                f"[SIG] Created history (credit marker) • ref={instance.reference}"
+            )

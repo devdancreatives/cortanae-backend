@@ -50,6 +50,7 @@ THIRD_PARTY_APPS = [
     # # ✅ Daphne must come before staticfiles
     # "daphne",
     "channels",
+    "uvicorn",
     "rest_framework",
     "drf_spectacular",
     "cloudinary",
@@ -197,9 +198,10 @@ if ENVIRONMENT == "local":
 else:
     # Gmail SMTP backend for production
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = "smtp.gmail.com"
-    EMAIL_PORT = 587
-    EMAIL_USE_TLS = True
+    EMAIL_HOST = "smtp.hostinger.com"
+    EMAIL_PORT = 465
+    EMAIL_USE_TLS = False
+    EMAIL_USE_SSL = True
     EMAIL_HOST_USER = config("EMAIL_HOST_USER")
     DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
     EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
@@ -219,8 +221,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "https://cortanae.com",
-    "https://cortanae-frontend.vercel.app"
-    
+    "https://cortanae-frontend.vercel.app",
 ]
 
 LOGGING = {
@@ -251,8 +252,8 @@ LOGGING = {
 ASGI_APPLICATION = "cortanae.asgi.application"
 
 CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
-        }
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
     }
+}

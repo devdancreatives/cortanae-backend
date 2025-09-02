@@ -12,6 +12,7 @@ class User(AbstractUser, BaseModelMixin):
     country = CountryField()
     verification_token = models.CharField(max_length=500, null=True)
     is_deleted = models.BooleanField(default=False)
+    email_notifications = models.BooleanField(default=True)
 
     @property
     def full_name(self):
