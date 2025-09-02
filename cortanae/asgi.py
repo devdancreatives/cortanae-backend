@@ -61,10 +61,10 @@ print(f"[ASGI] Loaded {len(ws_urlpatterns)} WebSocket route(s).")
 
 ws_app = JWTAuthMiddlewareStack(URLRouter(ws_urlpatterns))
 
-# Enforce allowed hosts outside local/dev
-if getattr(settings, "ENVIRONMENT", "local") != "local":
-    ws_app = AllowedHostsOriginValidator(ws_app)
-    print("[ASGI] AllowedHostsOriginValidator enabled.")
+# # Enforce allowed hosts outside local/dev
+# if getattr(settings, "ENVIRONMENT", "local") != "local":
+#     ws_app = AllowedHostsOriginValidator(ws_app)
+#     print("[ASGI] AllowedHostsOriginValidator enabled.")
 
 application = ProtocolTypeRouter(
     {
