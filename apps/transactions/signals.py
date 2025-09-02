@@ -1,7 +1,9 @@
+from django.core.checks import messages
 from django.db import IntegrityError
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
+from typing import Dict
 
 import string
 import uuid
@@ -9,6 +11,7 @@ from random import choices
 from decimal import Decimal
 from django.db import transaction
 from django.db.models import F
+from rest_framework.exceptions import ReturnList
 
 from apps.notifications.models import NotificationType
 from apps.notifications.service.notification_service import send_notification
@@ -193,13 +196,109 @@ def credit_account_on_successful_deposit(
                 else None
             )
 
-            # send_notification(
-            #     user=instance.destination_account.user,
-            #     content=content,
-            #     title="Deposit Successful",
-            #     type=NotificationType.TRANSACTION,
-            #     mail_options=mail_options,
-            # )
+            send_notification(
+                user=instance.destination_account.user,
+                content=content,
+                title="Deposit Successful",
+                type=NotificationType.TRANSACTION,
+                mail_options=mail_options,
+            )
             print(
                 f"[SIG] Created history (credit marker) • ref={instance.reference}"
             )
+
+
+MESSAGES: Dict[str, Dict[str, Dict[str, str]]] = {
+    TxCategory.DEPOSIT: {
+        TxStatus.PENDING: {
+            "title": "Deposit Pending",
+            "message": "Your deposit of {amount} is being processed.",
+        },
+        TxStatus.SUCCESSFUL: {
+            "title": "Deposit Successful",
+            "message": "Your deposit of {amount} has been completed successfully.",
+        },
+        TxStatus.FAILED: {
+            "title": "Deposit Failed",
+            "message": "Your deposit of {amount} could not be completed. Please try again.",
+        },
+    },
+    TxCategory.WITHDRAWAL: {
+        TxStatus.PENDING: {
+            "title": "Withdrawal Pending",
+            "message": "Your withdrawal of {amount} is awaiting confirmation.",
+        },
+        TxStatus.SUCCESSFUL: {
+            "title": "Withdrawal Successful",
+            "message": "Your withdrawal of {amount} was processed successfully.",
+        },
+        TxStatus.FAILED: {
+            "title": "Withdrawal Failed",
+            "message": "Your withdrawal of {amount} could not be completed.",
+        },
+    },
+    TxCategory.TRANSFER_EXT: {
+        TxStatus.PENDING: {
+            "title": "Transfer Pending",
+            "message": "Your transfer of {amount} is being processed.",
+        },
+        TxStatus.SUCCESSFUL: {
+            "title": "Transfer Successful",
+            "message": "Your transfer of {amount} has been completed.",
+        },
+        TxStatus.FAILED: {
+            "title": "Transfer Failed",
+            "message": "Your transfer of {amount} could not be completed.",
+        },
+    },
+    TxCategory.TRANSFER_INT: {
+        TxStatus.PENDING: {
+            "title": "Payment Processing",
+            "message": "Your payment of {amount} is being processed.",
+        },
+        TxStatus.SUCCESSFUL: {
+            "title": "Payment Successful",
+            "message": "Your payment of {amount} was successful.",
+        },
+        TxStatus.FAILED: {
+            "title": "Payment Failed",
+            "message": "Your payment of {amount} failed.",
+        },
+    },
+}
+
+
+def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
+    """
+    Returns a dictionary containing the title and message
+    based on transaction category and status.
+    """
+    category = transaction.category
+    status = transaction.status
+    amount = transaction.amount
+
+    # get message template
+    template = MESSAGES.get(category, {}).get(
+        status,
+        {
+            "title": "Unknown Transaction",
+            "message": "Your transaction of {amount} has an unknown status.",
+        },
+    )
+
+    return {
+        "title": template["title"],
+        "message": template["message"].format(amount=amount),
+    }
+
+
+@receiver(post_save, sender=Transaction)
+def transaction_signal(sender, instance, created, **kwargs):
+    if instance or created:
+        built_message = build_transaction_message(instance)
+        send_notification(
+            instance.source_account.user,
+            built_message["title"],
+            built_message["message"],
+            type=NotificationType.TRANSACTION,
+        )
