@@ -10,6 +10,7 @@ def send_notification_ws(sender, instance, created, **kwargs):
     if created:
         channel_layer = get_channel_layer()
         group_name = f"user_{instance.user.id}"
+        print("Sending notification to group:", group_name)
 
         async_to_sync(channel_layer.group_send)(
             group_name,
