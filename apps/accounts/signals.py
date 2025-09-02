@@ -32,12 +32,12 @@ def notify_account_changes(sender, instance: Account, created, **kwargs):
         "message": content,
     }
 
-    send_notification(
-        user=instance.user,
-        content=content,
-        title=title,
-        type="ACCOUNT",
-        mail_options=(
-            mail_options if instance.user.email_notifications else None
-        ),
-    )
+    # send_notification(
+    #     user=instance.user,
+    #     content=content,
+    #     title=title,
+    #     type="ACCOUNT",
+    #     mail_options=(
+    #         mail_options if instance.user.email_notifications else None
+    #     ),
+    # )

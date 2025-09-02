@@ -163,13 +163,13 @@ def credit_account_on_successful_deposit(
                 else None
             )
 
-            send_notification(
-                user=instance.destination_account.user,
-                content=content,
-                title="Deposit Successful",
-                type=NotificationType.TRANSACTION,
-                mail_options=mail_options,
-            )
+            # send_notification(
+            #     user=instance.destination_account.user,
+            #     content=content,
+            #     title="Deposit Successful",
+            #     type=NotificationType.TRANSACTION,
+            #     mail_options=mail_options,
+            # )
 
             print(
                 f"[SIG] Updated existing history • id={hist.id} • ref={instance.reference}"
@@ -193,13 +193,13 @@ def credit_account_on_successful_deposit(
                 else None
             )
 
-            send_notification(
-                user=instance.destination_account.user,
-                content=content,
-                title="Deposit Successful",
-                type=NotificationType.TRANSACTION,
-                mail_options=mail_options,
-            )
+            # send_notification(
+            #     user=instance.destination_account.user,
+            #     content=content,
+            #     title="Deposit Successful",
+            #     type=NotificationType.TRANSACTION,
+            #     mail_options=mail_options,
+            # )
             print(
                 f"[SIG] Created history (credit marker) • ref={instance.reference}"
             )
