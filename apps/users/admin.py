@@ -53,7 +53,7 @@ class UserAdmin(DjangoUserAdmin, BaseStampedAdmin):
                 "country",
                 "is_verified",
                 "is_deleted",
-                "verification_token",
+                "email_notifications",
             )
         }),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),

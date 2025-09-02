@@ -142,10 +142,10 @@ class UpdateHasSeenAPIView(APIView):
                 message = {
                     "type": "chatroom_message",
                     "text": chat.text,
-                    "receiver": chat.receiver.id,
+                    "receiver": str(chat.receiver.id),
                     "date": chat.date.isoformat(),
                     "has_seen": chat.has_seen,
-                    "sender": chat.sender.id,
+                    "sender": str(chat.sender.id),
                     "slug": chat.slug,
                     "read_receipt": "read_receipt",
                 }

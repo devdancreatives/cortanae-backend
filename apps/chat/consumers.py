@@ -6,6 +6,7 @@ from asgiref.sync import sync_to_async
 from django.db import IntegrityError
 from apps.chat.models import Chat, Room
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -87,16 +88,27 @@ handle_update_status = sync_to_async(
 class ChatRoomConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         try:
+            user = self.scope.get("user")
+            # 🔒 Require authenticated user (JWT or session via middleware)
+            if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+                print("[WS][AUTH] Anonymous connection rejected")
+                await self.close(code=4401)  # 4401: Unauthorized (custom)
+                return
+
             self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
             self.room_group_name = f"chat_{self.room_name}"
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)
             await self.accept()
+            
+           
         except Exception as e:
             print(f"[WS] connect error: {e}")
             logger.exception("[WS] connect error: %s", e)
             await self.close()
 
     async def disconnect(self, close_code):
+        self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
+        self.room_group_name = f"chat_{self.room_name}"
         await self.channel_layer.group_discard(
             self.room_group_name, self.channel_name
         )
@@ -142,6 +154,8 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
                 room_id=self.room_name,
                 slug=slug,
             )
+            # add notification logic here
+            
         except Exception:
             # Already logged in helper
             return

@@ -1,15 +1,28 @@
 from email.mime import text
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.contrib.auth.models import AnonymousUser
 import json
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-        self.group_name = f"user_{self.scope['user'].id}"
-
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
-        await self.accept()
+        try:
+            user = self.scope.get("user")
+            # 🔒 Require authenticated user (JWT or session via middleware)
+            if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+                print("[WS][AUTH] Anonymous connection rejected")
+                await self.close(code=4401)  # 4401: Unauthorized (custom)
+                return
+            
+            self.group_name = f"user_{user.id}"
+            await self.channel_layer.group_add(self.group_name, self.channel_name)
+            await self.accept()
+            
+        except Exception as e:
+            print(f"[WS] connect error: {e}")
+            await self.close()
+        
 
     async def send_notification(self, event):
         await self.send(
