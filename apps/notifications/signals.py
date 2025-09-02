@@ -16,9 +16,9 @@ def send_notification_ws(sender, instance, created, **kwargs):
             group_name,
             {
                 "type": "send_notification",  # matches the consumer method
-                "message": instance.content,  # customize payload
-                "title": instance.title,
-                "id": instance.id,
+                "message": str(instance.content),  # customize payload
+                "title": str(instance.title),
+                "id": str(instance.id),
                 "notification_type": instance.title,
             },
         )
