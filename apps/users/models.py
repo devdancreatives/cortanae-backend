@@ -10,7 +10,7 @@ class User(AbstractUser, BaseModelMixin):
     is_verified = models.BooleanField(default=False)
     email = models.EmailField(unique=True)
     country = CountryField()
-    verification_token = models.CharField(max_length=500, null=True)
+    verification_token = models.CharField(max_length=500, blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
     email_notifications = models.BooleanField(default=True)
 
