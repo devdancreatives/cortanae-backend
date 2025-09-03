@@ -259,92 +259,166 @@ class TransferSerializer(serializers.ModelSerializer):
         else:
             raise ValidationError({"detail": "Invalid transfer category"})
 
-    def handle_internal_transfer(
-        self, validated_data, meta_data, user_account
-    ):
-        print("meta_data", meta_data)
-        """function to handle internal transfers"""
-        beneficiary_account_number = meta_data.get(
-            "beneficiary_account_number"
-        )
+    def handle_internal_transfer(self, validated_data, meta_data, user_account):
+        """
+        Internal transfers:
+        - Safely unpack destination resolution.
+        - Provide explicit ValidationError instead of TypeError.
+        - Add clear debug logs.
+        """
+        print(f"[InternalTransfer] meta_data={meta_data}")
+        beneficiary_account_number = (meta_data or {}).get("beneficiary_account_number")
 
-        destination_acc_type, destination_account = (
-            self.check_internal_account(beneficiary_account_number)
-        )
+        dest_result = self.check_internal_account(beneficiary_account_number)
+        dest_type, dest_account = (dest_result if isinstance(dest_result, (tuple, list)) else (None, None))
 
-        if not destination_account:
-            raise ValidationError(
-                {
-                    "detail": "Beneficiary does not have an account with the bank"
-                }
-            )
-        if user_account.id == destination_account.id:
-            raise ValidationError(
-                {"detail": "Cannot transfer to your own account"}
-            )
+        if not dest_account:
+            raise ValidationError({"detail": "Beneficiary does not have an account with the bank."})
+
+        if str(user_account.id) == str(dest_account.id):
+            raise ValidationError({"detail": "Cannot transfer to your own account."})
 
         amount = validated_data.get("amount")
         account_type = validated_data.get("account_type")
+        print(f"[InternalTransfer] amount={amount} account_type={account_type} dest_type={dest_type}")
+
+        if amount is None or amount <= 0:
+            raise ValidationError({"detail": "Amount must be greater than zero."})
+        if account_type not in ("savings", "checking"):
+            raise ValidationError({"detail": "Invalid account type."})
 
         with transaction.atomic():
-            user_account = Account.objects.select_for_update().get(
-                pk=user_account.pk
-            )
-            destination_account = Account.objects.select_for_update().get(
-                pk=destination_account.pk
-            )
+            # Lock rows to avoid race conditions
+            ua_locked = Account.objects.select_for_update().get(pk=user_account.pk)
+            da_locked = Account.objects.select_for_update().get(pk=dest_account.pk)
 
-            # ✅ strict ">" checks (return 400, not 500)
-            if account_type == "savings" and not (
-                user_account.savings_balance > amount
-            ):
-                raise serializers.ValidationError(
-                    {"detail": "Insufficient funds in savings."}
-                )
-            if account_type == "checking" and not (
-                user_account.checking_balance > amount
-            ):
-                raise serializers.ValidationError(
-                    {"detail": "Insufficient funds in checking."}
-                )
+            # ✅ Strict balance check (use '>' so exact-balance-to-zero is allowed if you prefer ≥ change to >=)
+            if account_type == "savings" and not (ua_locked.savings_balance > amount):
+                raise ValidationError({"detail": "Insufficient funds in savings."})
+            if account_type == "checking" and not (ua_locked.checking_balance > amount):
+                raise ValidationError({"detail": "Insufficient funds in checking."})
 
-            # debit sender
-            if account_type == "savings":
-                user_account.savings_balance -= amount
-                if destination_acc_type == "checking":
-                    destination_account.checking_balance += amount
-                else:
-                    destination_account.savings_balance += amount
-
-            elif account_type == "checking":
-                user_account.checking_balance -= amount
-                if destination_acc_type == "checking":
-                    destination_account.checking_balance += amount
-                else:
-                    destination_account.savings_balance += amount
-            else:
-                raise ValidationError({"detail": "Invalid account type"})
-
-            user_account.save()
-            destination_account.save()
-
+            # Confirm PIN after locks (prevents TOCTOU)
             account_pin = validated_data.pop("account_pin")
-            # description = validated_data.pop("description", "")
+            if not ua_locked.check_account_pin(account_pin):
+                raise ValidationError({"detail": "Invalid account pin."})
 
-            if not user_account.check_account_pin(account_pin):
-                raise ValidationError({"detail": "Invalid account pin"})
+            # 🔁 Move funds
+            if account_type == "savings":
+                ua_locked.savings_balance -= amount
+                if dest_type == "checking":
+                    da_locked.checking_balance += amount
+                else:
+                    da_locked.savings_balance += amount
+            else:  # checking
+                ua_locked.checking_balance -= amount
+                if dest_type == "checking":
+                    da_locked.checking_balance += amount
+                else:
+                    da_locked.savings_balance += amount
 
-            transaction_instance = Transaction.objects.create(
-                **validated_data,
-                destination_account=destination_account,
+            ua_locked.save(update_fields=["savings_balance", "checking_balance"])
+            da_locked.save(update_fields=["savings_balance", "checking_balance"])
+
+            # Create transaction + meta
+            tx = Transaction.objects.create(
+                **{k: v for k, v in validated_data.items() if k not in ("account_pin",)},
+                source_account=ua_locked,
+                destination_account=da_locked,
                 status=TxStatus.SUCCESSFUL,
                 initiated_by=self.context["request"].user,
             )
+            TransactionMeta.objects.create(transaction=tx, **(meta_data or {}))
 
-            TransactionMeta.objects.create(
-                transaction=transaction_instance, **(meta_data or {})
-            )
-            return transaction_instance
+            print(f"[InternalTransfer][OK] tx_id={tx.id} src={ua_locked.id} dest={da_locked.id} amt={amount}")
+            return tx
+    
+    # def handle_internal_transfer(
+    #     self, validated_data, meta_data, user_account
+    # ):
+    #     print("meta_data", meta_data)
+    #     """function to handle internal transfers"""
+    #     beneficiary_account_number = meta_data.get(
+    #         "beneficiary_account_number"
+    #     )
+
+    #     destination_acc_type, destination_account = (
+    #         self.check_internal_account(beneficiary_account_number)
+    #     )
+
+    #     if not destination_account:
+    #         raise ValidationError(
+    #             {
+    #                 "detail": "Beneficiary does not have an account with the bank"
+    #             }
+    #         )
+    #     if user_account.id == destination_account.id:
+    #         raise ValidationError(
+    #             {"detail": "Cannot transfer to your own account"}
+    #         )
+
+    #     amount = validated_data.get("amount")
+    #     account_type = validated_data.get("account_type")
+
+    #     with transaction.atomic():
+    #         user_account = Account.objects.select_for_update().get(
+    #             pk=user_account.pk
+    #         )
+    #         destination_account = Account.objects.select_for_update().get(
+    #             pk=destination_account.pk
+    #         )
+
+    #         # ✅ strict ">" checks (return 400, not 500)
+    #         if account_type == "savings" and not (
+    #             user_account.savings_balance > amount
+    #         ):
+    #             raise serializers.ValidationError(
+    #                 {"detail": "Insufficient funds in savings."}
+    #             )
+    #         if account_type == "checking" and not (
+    #             user_account.checking_balance > amount
+    #         ):
+    #             raise serializers.ValidationError(
+    #                 {"detail": "Insufficient funds in checking."}
+    #             )
+
+    #         # debit sender
+    #         if account_type == "savings":
+    #             user_account.savings_balance -= amount
+    #             if destination_acc_type == "checking":
+    #                 destination_account.checking_balance += amount
+    #             else:
+    #                 destination_account.savings_balance += amount
+
+    #         elif account_type == "checking":
+    #             user_account.checking_balance -= amount
+    #             if destination_acc_type == "checking":
+    #                 destination_account.checking_balance += amount
+    #             else:
+    #                 destination_account.savings_balance += amount
+    #         else:
+    #             raise ValidationError({"detail": "Invalid account type"})
+
+    #         user_account.save()
+    #         destination_account.save()
+
+    #         account_pin = validated_data.pop("account_pin")
+    #         # description = validated_data.pop("description", "")
+
+    #         if not user_account.check_account_pin(account_pin):
+    #             raise ValidationError({"detail": "Invalid account pin"})
+
+    #         transaction_instance = Transaction.objects.create(
+    #             **validated_data,
+    #             destination_account=destination_account,
+    #             status=TxStatus.SUCCESSFUL,
+    #             initiated_by=self.context["request"].user,
+    #         )
+
+    #         TransactionMeta.objects.create(
+    #             transaction=transaction_instance, **(meta_data or {})
+    #         )
+    #         return transaction_instance
 
     def check_internal_account(self, account_number: str):
         """
