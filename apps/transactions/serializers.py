@@ -74,8 +74,14 @@ class DepositSerializer(serializers.ModelSerializer):
         # ✅ Robust request/user extraction
         request = self.context.get("request")
         if request is None:
-            print("[Deposit][ERROR] Missing DRF request in serializer context.")
-            raise ValidationError({"detail": "Internal error: request context missing. Contact support."})
+            print(
+                "[Deposit][ERROR] Missing DRF request in serializer context."
+            )
+            raise ValidationError(
+                {
+                    "detail": "Internal error: request context missing. Contact support."
+                }
+            )
 
         user = getattr(request, "user", None)
         if user is None or user.is_anonymous:
@@ -86,7 +92,9 @@ class DepositSerializer(serializers.ModelSerializer):
         user_account = getattr(user, "user_accounts", None)
         if not user_account:
             print(f"[Deposit][ERROR] User {user.id} has no linked account.")
-            raise ValidationError({"detail": "User does not have an account on the platform."})
+            raise ValidationError(
+                {"detail": "User does not have an account on the platform."}
+            )
 
         # ✅ Extract files safely
         payment_proof = validated_data.pop("payment_proof", None)
@@ -94,7 +102,9 @@ class DepositSerializer(serializers.ModelSerializer):
         if not payment_proof:
             raise ValidationError({"detail": "Payment proof is required."})
 
-        print(f"[Deposit][CREATE] user={user.id} acct={user_account.id} amount={validated_data.get('amount')}")
+        print(
+            f"[Deposit][CREATE] user={user.id} acct={user_account.id} amount={validated_data.get('amount')}"
+        )
 
         # ✅ Create tx + meta
         tx = Transaction.objects.create(
@@ -112,7 +122,11 @@ class DepositSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         meta = getattr(instance, "meta", None)
-        data["payment_proof"] = meta.payment_proof.url if meta and getattr(meta, "payment_proof", None) else None
+        data["payment_proof"] = (
+            meta.payment_proof.url
+            if meta and getattr(meta, "payment_proof", None)
+            else None
+        )
         return data
 
 
@@ -135,9 +149,7 @@ class TransactionMetaSerializer(serializers.ModelSerializer):
     recipient_address = serializers.CharField(
         required=False, allow_blank=True, trim_whitespace=True
     )
-    description = serializers.CharField(
-        required=False, allow_blank=True
-    )
+    description = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = TransactionMeta
@@ -203,9 +215,7 @@ class TransferSerializer(serializers.ModelSerializer):
         valid_methods = [TxMethod.BANK, TxMethod.INTERNAL, TxMethod.WIRE]
         if value not in valid_methods:
             raise ValidationError(
-                {
-                    "detail": f"Method must be one of {', '.join(valid_methods)}"
-                }
+                {"detail": f"Method must be one of {', '.join(valid_methods)}"}
             )
         return value
 
@@ -244,9 +254,7 @@ class TransferSerializer(serializers.ModelSerializer):
                 "beneficiary_bank_name"
             ):
                 raise ValidationError(
-                    {
-                        "detail": "Bank name is required for bank/wire transfers"
-                    }
+                    {"detail": "Bank name is required for bank/wire transfers"}
                 )
         return attrs
 
@@ -260,19 +268,22 @@ class TransferSerializer(serializers.ModelSerializer):
         user_account = user.user_accounts
 
         category = validated_data.get("category")
-        print("this is the category", category)
         if category == TxCategory.TRANSFER_INT:
             return self.handle_internal_transfer(
                 validated_data, meta_data, user_account
             )
         elif category == TxCategory.TRANSFER_EXT:
-            return self.handle_external_transfer(
+            transaction = self.handle_external_transfer(
                 validated_data, meta_data, user_account
             )
+            print("Returned transaction", transaction)
+            return transaction
         else:
             raise ValidationError({"detail": "Invalid transfer category"})
 
-    def handle_internal_transfer(self, validated_data, meta_data, user_account):
+    def handle_internal_transfer(
+        self, validated_data, meta_data, user_account
+    ):
         """
         Internal transfers:
         - Safely unpack destination resolution.
@@ -280,36 +291,64 @@ class TransferSerializer(serializers.ModelSerializer):
         - Add clear debug logs.
         """
         print(f"[InternalTransfer] meta_data={meta_data}")
-        beneficiary_account_number = (meta_data or {}).get("beneficiary_account_number")
+        beneficiary_account_number = (meta_data or {}).get(
+            "beneficiary_account_number"
+        )
 
         dest_result = self.check_internal_account(beneficiary_account_number)
-        dest_type, dest_account = (dest_result if isinstance(dest_result, (tuple, list)) else (None, None))
+        dest_type, dest_account = (
+            dest_result
+            if isinstance(dest_result, (tuple, list))
+            else (None, None)
+        )
 
         if not dest_account:
-            raise ValidationError({"detail": "Beneficiary does not have an account with the bank."})
+            raise ValidationError(
+                {
+                    "detail": "Beneficiary does not have an account with the bank."
+                }
+            )
 
         if str(user_account.id) == str(dest_account.id):
-            raise ValidationError({"detail": "Cannot transfer to your own account."})
+            raise ValidationError(
+                {"detail": "Cannot transfer to your own account."}
+            )
 
         amount = validated_data.get("amount")
         account_type = validated_data.get("account_type")
-        print(f"[InternalTransfer] amount={amount} account_type={account_type} dest_type={dest_type}")
+        print(
+            f"[InternalTransfer] amount={amount} account_type={account_type} dest_type={dest_type}"
+        )
 
         if amount is None or amount <= 0:
-            raise ValidationError({"detail": "Amount must be greater than zero."})
+            raise ValidationError(
+                {"detail": "Amount must be greater than zero."}
+            )
         if account_type not in ("savings", "checking"):
             raise ValidationError({"detail": "Invalid account type."})
 
         with transaction.atomic():
             # Lock rows to avoid race conditions
-            ua_locked = Account.objects.select_for_update().get(pk=user_account.pk)
-            da_locked = Account.objects.select_for_update().get(pk=dest_account.pk)
+            ua_locked = Account.objects.select_for_update().get(
+                pk=user_account.pk
+            )
+            da_locked = Account.objects.select_for_update().get(
+                pk=dest_account.pk
+            )
 
             # ✅ Strict balance check (use '>' so exact-balance-to-zero is allowed if you prefer ≥ change to >=)
-            if account_type == "savings" and not (ua_locked.savings_balance > amount):
-                raise ValidationError({"detail": "Insufficient funds in savings."})
-            if account_type == "checking" and not (ua_locked.checking_balance > amount):
-                raise ValidationError({"detail": "Insufficient funds in checking."})
+            if account_type == "savings" and not (
+                ua_locked.savings_balance > amount
+            ):
+                raise ValidationError(
+                    {"detail": "Insufficient funds in savings."}
+                )
+            if account_type == "checking" and not (
+                ua_locked.checking_balance > amount
+            ):
+                raise ValidationError(
+                    {"detail": "Insufficient funds in checking."}
+                )
 
             # Confirm PIN after locks (prevents TOCTOU)
             account_pin = validated_data.pop("account_pin")
@@ -330,12 +369,21 @@ class TransferSerializer(serializers.ModelSerializer):
                 else:
                     da_locked.savings_balance += amount
 
-            ua_locked.save(update_fields=["savings_balance", "checking_balance"])
-            da_locked.save(update_fields=["savings_balance", "checking_balance"])
+            ua_locked.save(
+                update_fields=["savings_balance", "checking_balance"]
+            )
+            da_locked.save(
+                update_fields=["savings_balance", "checking_balance"]
+            )
 
+            print("At this point in the transaction")
             # Create transaction + meta
             tx = Transaction.objects.create(
-                **{k: v for k, v in validated_data.items() if k not in ("account_pin",)},
+                **{
+                    k: v
+                    for k, v in validated_data.items()
+                    if k not in ("account_pin",)
+                },
                 source_account=ua_locked,
                 destination_account=da_locked,
                 status=TxStatus.SUCCESSFUL,
@@ -343,9 +391,11 @@ class TransferSerializer(serializers.ModelSerializer):
             )
             TransactionMeta.objects.create(transaction=tx, **(meta_data or {}))
 
-            print(f"[InternalTransfer][OK] tx_id={tx.id} src={ua_locked.id} dest={da_locked.id} amt={amount}")
+            print(
+                f"[InternalTransfer][OK] tx_id={tx.id} src={ua_locked.id} dest={da_locked.id} amt={amount}"
+            )
             return tx
-    
+
     # def handle_internal_transfer(
     #     self, validated_data, meta_data, user_account
     # ):
@@ -568,6 +618,7 @@ class TransferSerializer(serializers.ModelSerializer):
                 elif account_type == "checking":
                     ua_locked.checking_balance -= amount
                 ua_locked.save()
+                # FIX: integrity error comes from here
                 tx = Transaction.objects.create(
                     **{
                         k: v
