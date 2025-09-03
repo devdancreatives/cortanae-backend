@@ -133,9 +133,10 @@ class PasswordResetSerializer(serializers.ModelSerializer):
 
 
 class PasswordResetRequestSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
     class Meta:
         model = TokenValidator
-        fields = ["email"]
+        fields = ("email",)
 
     def validate(self, attrs):
         email = attrs.get("email")

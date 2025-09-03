@@ -71,35 +71,48 @@ class DepositSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        user = self.context["request"].user
-        if not hasattr(user, "user_accounts"):
-            raise ValidationError(
-                {"error": "User does not have an account on the platform"}
-            )
-        user_account = user.user_accounts
-        payment_proof = validated_data.pop("payment_proof")
+        # ✅ Robust request/user extraction
+        request = self.context.get("request")
+        if request is None:
+            print("[Deposit][ERROR] Missing DRF request in serializer context.")
+            raise ValidationError({"detail": "Internal error: request context missing. Contact support."})
+
+        user = getattr(request, "user", None)
+        if user is None or user.is_anonymous:
+            print("[Deposit][ERROR] Anonymous or missing user on request.")
+            raise ValidationError({"detail": "Authentication required."})
+
+        # ✅ Ensure user has an account
+        user_account = getattr(user, "user_accounts", None)
+        if not user_account:
+            print(f"[Deposit][ERROR] User {user.id} has no linked account.")
+            raise ValidationError({"detail": "User does not have an account on the platform."})
+
+        # ✅ Extract files safely
+        payment_proof = validated_data.pop("payment_proof", None)
         payment_proof_2 = validated_data.pop("payment_proof_2", None)
-        transaction = Transaction.objects.create(
+        if not payment_proof:
+            raise ValidationError({"detail": "Payment proof is required."})
+
+        print(f"[Deposit][CREATE] user={user.id} acct={user_account.id} amount={validated_data.get('amount')}")
+
+        # ✅ Create tx + meta
+        tx = Transaction.objects.create(
             **validated_data,
             destination_account=user_account,
             initiated_by=user,
         )
-        # account_number = validated_data.get("beneficiary_account_number", None)
         TransactionMeta.objects.create(
-            transaction=transaction,
+            transaction=tx,
             payment_proof=payment_proof,
             payment_proof_2=payment_proof_2,
         )
-        return transaction
+        return tx
 
     def to_representation(self, instance):
-        """Include payment_proof in output"""
         data = super().to_representation(instance)
-        data["payment_proof"] = (
-            instance.meta.payment_proof.url
-            if instance.meta and instance.meta.payment_proof
-            else None
-        )
+        meta = getattr(instance, "meta", None)
+        data["payment_proof"] = meta.payment_proof.url if meta and getattr(meta, "payment_proof", None) else None
         return data
 
 

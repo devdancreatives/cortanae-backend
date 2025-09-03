@@ -116,17 +116,23 @@ class PasswordResetRequestView(CreateAPIView):
     serializer_class = PasswordResetRequestSerializer
     queryset = TokenValidator.objects.all()
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         email = request.data.get("email", None)
         if not email:
             return Response(
-                "Email not provided", status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Email not provided"}, 
+                status=status.HTTP_400_BAD_REQUEST
             )
-        serializer = self.get_serializer(data=email)
+
+        # ✅ Pass dictionary to serializer
+        serializer = self.get_serializer(data={"email": email})
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response("Password reset mail sent", status=status.HTTP_200_OK)
 
+        return Response(
+            {"detail": "Password reset mail sent"}, 
+            status=status.HTTP_200_OK
+        )
 
 class PasswordResetView(CreateAPIView):
     serializer_class = PasswordResetSerializer
