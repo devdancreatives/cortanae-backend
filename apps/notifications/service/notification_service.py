@@ -9,5 +9,5 @@ def send_notification(user, content, title, type, mail_options=None):
         user=user, title=title, content=content, type=type
     )
 
-    if user.email_notifications or mail_options:
-        mail_service.mail_send(**mail_options)
+    # if user.email_notifications or mail_options:
+    #     mail_service.mail_send(**mail_options)
