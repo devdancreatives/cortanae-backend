@@ -96,8 +96,6 @@ class Transaction(BaseModelMixin):
         max_length=100, null=True, blank=True, unique=True
     )
     
-    over_ride_created_at = models.DateTimeField(blank=True, null=True)
-
 
     class Meta:
         ordering = ["-created_at"]

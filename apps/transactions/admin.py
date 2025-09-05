@@ -80,7 +80,7 @@ class TransactionAdmin(admin.ModelAdmin):
         ("Participants", {"fields": ("source_account", "destination_account")}),
         ("Amounts", {"fields": ("amount", "fee_amount", "currency", "net_amount_display")}),
         ("Context", {"fields": ("error_message", "initiated_by",
-                                "created_at", "updated_at", "over_ride_created_at",)}),
+                                "created_at", "updated_at",)}),
     )
 
     actions = ("mark_successful", "mark_cancelled", "mark_failed")
