@@ -56,16 +56,6 @@ def create_transaction_history(sender, instance, created, **kwargs):
         )
 
 
-@receiver(post_save, sender=Transaction)
-def override_created_at_transaction(sender, instance, created, **kwargs):
-    """
-    If instance.over_ride_created_at is set, update created_at with the given value.
-    """
-    if instance.over_ride_created_at:
-        print(f"[SIGNAL] Overriding created_at for Transaction {instance.pk} → {instance.override_date}")
-        instance.created_at = instance.over_ride_created_at
-
-
 def _is_success_status(status: str) -> bool:
     # Support legacy "successful" alongside enum COMPLETED
     return status in {TxStatus.SUCCESSFUL, "successful"}
