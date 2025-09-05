@@ -95,6 +95,9 @@ class Transaction(BaseModelMixin):
     idempotency_key = models.CharField(
         max_length=100, null=True, blank=True, unique=True
     )
+    
+    over_ride_created_at = models.DateTimeField(blank=True, null=True)
+
 
     class Meta:
         ordering = ["-created_at"]
@@ -186,6 +189,7 @@ class TransactionMeta(models.Model):
     payment_proof_2 = CloudinaryField(
         "payment_proof_2", null=True, blank=True, folder="transactions/payment_proof_2"
     )
+    
 
     class Meta:
         verbose_name = "Transaction Details"
