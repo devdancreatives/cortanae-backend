@@ -268,42 +268,42 @@ MESSAGES: Dict[str, Dict[str, Dict[str, str]]] = {
 }
 
 
-def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
-    """
-    Returns a dictionary containing the title and message
-    based on transaction category and status.
-    """
-    category = transaction.category
-    status = transaction.status
-    amount = transaction.amount
+# def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
+#     """
+#     Returns a dictionary containing the title and message
+#     based on transaction category and status.
+#     """
+#     category = transaction.category
+#     status = transaction.status
+#     amount = transaction.amount
 
-    # get message template
-    template = MESSAGES.get(category, {}).get(
-        status,
-        {
-            "title": "Unknown Transaction",
-            "message": "Your transaction of {amount} has an unknown status.",
-        },
-    )
+#     # get message template
+#     template = MESSAGES.get(category, {}).get(
+#         status,
+#         {
+#             "title": "Unknown Transaction",
+#             "message": "Your transaction of {amount} has an unknown status.",
+#         },
+#     )
 
-    return {
-        "title": template["title"],
-        "message": template["message"].format(amount=amount),
-    }
+#     return {
+#         "title": template["title"],
+#         "message": template["message"].format(amount=amount),
+#     }
 
 
-@receiver(post_save, sender=Transaction)
-def transaction_signal(sender, instance, created, **kwargs):
+# @receiver(post_save, sender=Transaction)
+# def transaction_signal(sender, instance, created, **kwargs):
 
-    if instance or created:
-        built_message = build_transaction_message(instance)
-        send_notification(
-            (
-                instance.destination_account.user
-                if TxCategory.DEPOSIT
-                else instance.source_account.user
-            ),
-            built_message["title"],
-            built_message["message"],
-            type=NotificationType.TRANSACTION,
-        )
+#     if instance or created:
+#         built_message = build_transaction_message(instance)
+#         send_notification(
+#             (
+#                 instance.destination_account.user
+#                 if TxCategory.DEPOSIT
+#                 else instance.source_account.user
+#             ),
+#             built_message["title"],
+#             built_message["message"],
+#             type=NotificationType.TRANSACTION,
+#         )

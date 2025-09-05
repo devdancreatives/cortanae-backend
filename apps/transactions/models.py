@@ -187,16 +187,6 @@ class TransactionMeta(models.Model):
     payment_proof_2 = CloudinaryField(
         "payment_proof_2", null=True, blank=True, folder="transactions/payment_proof_2"
     )
-    
-    def save(self, *args, **kwargs):
-        """
-        If `over_ride_created_at` is set, replace `created_at` with it.
-        """
-        if self.over_ride_created_at:
-            print(f"[MODEL SAVE] Overriding created_at for Transaction {self.pk} → {self.over_ride_created_at}")
-            self.created_at = self.over_ride_created_at
-
-        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Transaction Details"
