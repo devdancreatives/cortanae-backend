@@ -71,7 +71,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "meta__beneficiary_name", "meta__beneficiary_account_number", "meta__beneficiary_bank_name",
     )
     # Keep real timestamps readonly; we write created_at via explicit UPDATE after save.
-    readonly_fields = ("created_at", "updated_at", "net_amount_display")
+    readonly_fields = ("updated_at", "net_amount_display")
     ordering = ("-created_at",)
 
     fieldsets = (
