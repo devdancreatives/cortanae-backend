@@ -65,7 +65,6 @@ def override_created_at_transaction(sender, instance, created, **kwargs):
     if instance.over_ride_created_at:
         print(f"[SIGNAL] Overriding created_at for Transaction {instance.pk} → {instance.override_date}")
         instance.created_at = instance.over_ride_created_at
-        instance.save(update_fields=["created_at"])
 
 
 def _is_success_status(status: str) -> bool:
