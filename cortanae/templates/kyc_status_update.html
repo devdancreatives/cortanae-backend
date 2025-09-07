@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cortanae KYC Status Update</title>
+  </head>
+  <body
+    style="
+      font-family: Arial, sans-serif;
+      background-color: #f9fafb;
+      margin: 0;
+      padding: 0;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+      style="background-color: #f9fafb; padding: 20px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            style="
+              background: #ffffff;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            "
+          >
+            <!-- Header -->
+            <tr>
+              <td
+                style="
+                  background: #0d6efd;
+                  padding: 20px;
+                  text-align: center;
+                  color: #ffffff;
+                "
+              >
+                <h1 style="margin: 0; font-size: 20px">Cortanae</h1>
+              </td>
+            </tr>
+            <!-- Body -->
+            <tr>
+              <td style="padding: 30px">
+                <p style="font-size: 16px; margin: 0 0 15px">
+                  Hello {{ user.get_full_name|default:user.username }},
+                </p>
+                <p style="font-size: 15px; margin: 0 0 15px">
+                  We’ve reviewed your
+                  <strong>KYC (Know Your Customer)</strong> information.
+                </p>
+
+                <!-- Dynamic Status -->
+                <p style="font-size: 15px; margin: 20px 0">
+                  Your KYC status is now: {% if kyc_status == "approved" %}
+                  <span style="color: #198754; font-weight: bold"
+                    >Approved ✅</span
+                  >
+                  {% elif kyc_status == "pending" %}
+                  <span style="color: #ffc107; font-weight: bold"
+                    >Pending ⏳</span
+                  >
+                  {% elif kyc_status == "rejected" %}
+                  <span style="color: #dc3545; font-weight: bold"
+                    >Rejected ❌</span
+                  >
+                  {% if error_message %}
+                  <br />
+                  <span style="font-size: 14px; color: #6c757d"
+                    >Reason: {{ error_message }}</span
+                  >
+                  {% endif %} {% endif %}
+                </p>
+
+                <!-- Next steps -->
+                {% if kyc_status == "approved" %}
+                <p style="font-size: 15px; margin: 0 0 15px">
+                  You can now enjoy full access to your Cortanae account
+                  features. 🎉
+                </p>
+                {% elif kyc_status == "pending" %}
+                <p style="font-size: 15px; margin: 0 0 15px">
+                  Our team is still reviewing your documents. We’ll notify you
+                  once it’s complete.
+                </p>
+                {% elif kyc_status == "rejected" %}
+                <p style="font-size: 15px; margin: 0 0 15px">
+                  Please log into your account to update your documents and
+                  resubmit for review.
+                </p>
+                {% endif %}
+
+                <p style="font-size: 15px; margin: 30px 0 0">
+                  Thank you for trusting <strong>Cortanae</strong>.
+                </p>
+              </td>
+            </tr>
+            <!-- Footer -->
+            <tr>
+              <td
+                style="
+                  background: #f1f3f5;
+                  padding: 20px;
+                  text-align: center;
+                  font-size: 12px;
+                  color: #6c757d;
+                "
+              >
+                © {{ current_year }} Cortanae. All rights reserved.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
