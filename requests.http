@@ -1,0 +1,50 @@
+@BASE_URL = http://127.0.0.1:8000/api
+@MY_TOKEN_NAME = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyNDg1NjU0LCJpYXQiOjE3NTY5MzM2NTQsImp0aSI6IjU2NGRjOGIxYWE4MjRkMjhiNDBmYzI2NDU2NjcxNjQ1IiwidXNlcl9pZCI6ImFjOTVjZWVmLTdjNDMtNGFmMi05NWZhLTQ4Yzk5NjViNGM1NyJ9.GR1-FWRV3BXWk71AyDYi08_EP6KbhXd6pbpK6VD5SsM,
+
+# @name scratchpad
+
+POST https://httpbin.org/post HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+
+{
+  "foo": "bar"
+}
+
+
+### 
+
+# @name login
+
+POST {{BASE_URL}}/login/ HTTP/1.1
+
+{
+  "email": "oreoluwaakinbo.oa@gmail.com",
+  "password": "TheKing1!"
+}
+
+
+### 
+
+# @name make transaction
+
+POST {{BASE_URL}}/boot/ HTTP/1.1
+
+
+### 
+
+# @name register
+
+POST {{BASE_URL}}/register HTTP/1.1
+
+{
+  "email": "",
+  "password": ""
+}
+
+
+### 
+
+# @name make deposit
+
+POST {{BASE_URL}}/transaction/deposit HTTP/1.1

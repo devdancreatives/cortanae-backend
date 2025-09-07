@@ -186,11 +186,26 @@ def credit_account_on_successful_deposit(
             )
 
             content = f"{amt} has been credited into your {acc_label} account. New balance: {new_balance}"
+
             mail_options = (
                 {
+                    # Original keys (keep for now)
                     "to": instance.destination_account.user.email,
                     "subject": "Deposit Successful",
                     "body": content,
+                    # Standardized keys
+                    "title": "Deposit Successful",
+                    "recipient": instance.destination_account.user.email,
+                    "message": content,
+                    "template": "deposit_successful",  # TODO: create template
+                    "content": {
+                        "user": instance.destination_account.user,
+                        "current_year": timezone.now().year,
+                        "amount": instance.amount,
+                        "currency": instance.currency,
+                        "account_name": instance.destination_account.account_name,
+                        "reference": instance.reference,
+                    },
                 }
                 if instance.destination_account.user.email_notifications
                 else None
