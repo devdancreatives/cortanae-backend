@@ -3,7 +3,8 @@ from django.db import IntegrityError
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
-from typing import Dict
+from typing import Dict, Any
+from django.utils import timezone
 
 import string
 import uuid
@@ -158,21 +159,32 @@ def credit_account_on_successful_deposit(
             content = f"{amt} has been credited into your {acc_label} account. New balance: {new_balance}"
             mail_options = (
                 {
-                    "to": instance.destination_account.user.email,
-                    "subject": "Deposit Successful",
-                    "body": content,
+                    "title": "Deposit Successful",
+                    "content": {
+                        "user": instance.destination_account.user,
+                        "current_year": timezone.now().year,
+                        "amount": instance.amount,
+                        "currency": instance.currency,
+                        "account_name": instance.destination_account.account_name,
+                        "reference": instance.reference,
+                        "new_balance": new_balance,
+                        "account_type": acc_label,
+                    },
+                    "recipient": instance.destination_account.user.email,
+                    "template": "deposit_successful",
+                    "message": content,
                 }
                 if instance.destination_account.user.email_notifications
                 else None
             )
 
-            # send_notification(
-            #     user=instance.destination_account.user,
-            #     content=content,
-            #     title="Deposit Successful",
-            #     type=NotificationType.TRANSACTION,
-            #     mail_options=mail_options,
-            # )
+            send_notification(
+                user=instance.destination_account.user,
+                content=content,
+                title="Deposit Successful",
+                type=NotificationType.TRANSACTION,
+                mail_options=mail_options,
+            )
 
             print(
                 f"[SIG] Updated existing history • id={hist.id} • ref={instance.reference}"
@@ -189,11 +201,9 @@ def credit_account_on_successful_deposit(
 
             mail_options = (
                 {
-                    # Original keys (keep for now)
                     "to": instance.destination_account.user.email,
                     "subject": "Deposit Successful",
                     "body": content,
-                    # Standardized keys
                     "title": "Deposit Successful",
                     "recipient": instance.destination_account.user.email,
                     "message": content,
@@ -283,42 +293,150 @@ MESSAGES: Dict[str, Dict[str, Dict[str, str]]] = {
 }
 
 
-# def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
-#     """
-#     Returns a dictionary containing the title and message
-#     based on transaction category and status.
-#     """
-#     category = transaction.category
-#     status = transaction.status
-#     amount = transaction.amount
+def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
+    """
+    Returns a dictionary containing the title and message
+    based on transaction category and status.
+    """
+    category = transaction.category
+    status = transaction.status
+    amount = transaction.amount
 
-#     # get message template
-#     template = MESSAGES.get(category, {}).get(
-#         status,
-#         {
-#             "title": "Unknown Transaction",
-#             "message": "Your transaction of {amount} has an unknown status.",
-#         },
-#     )
+    # get message template
+    template = MESSAGES.get(category, {}).get(
+        status,
+        {
+            "title": "Unknown Transaction",
+            "message": "Your transaction of {amount} has an unknown status.",
+        },
+    )
 
-#     return {
-#         "title": template["title"],
-#         "message": template["message"].format(amount=amount),
-#     }
+    return {
+        "title": template["title"],
+        "message": template["message"].format(amount=amount),
+    }
 
 
-# @receiver(post_save, sender=Transaction)
-# def transaction_signal(sender, instance, created, **kwargs):
+def build_mail_options_for_transaction(
+    transaction: Transaction, built_message: Dict[str, str]
+) -> Dict[str, Any]:
+    """
+    Build mail_options dictionary for transaction notifications based on category and status.
+    """
+    # Determine the user to notify
+    if transaction.category == TxCategory.DEPOSIT:
+        user = (
+            transaction.destination_account.user
+            if transaction.destination_account
+            else None
+        )
+    else:
+        user = (
+            transaction.source_account.user
+            if transaction.source_account
+            else None
+        )
 
-#     if instance or created:
-#         built_message = build_transaction_message(instance)
-#         send_notification(
-#             (
-#                 instance.destination_account.user
-#                 if TxCategory.DEPOSIT
-#                 else instance.source_account.user
-#             ),
-#             built_message["title"],
-#             built_message["message"],
-#             type=NotificationType.TRANSACTION,
-#         )
+    if not user:
+        return None
+
+    # Base content for all transactions
+    content = {
+        "user": user,
+        "current_year": timezone.now().year,
+        "amount": transaction.amount,
+        "currency": transaction.currency,
+        "reference": transaction.reference,
+        "title": built_message["title"],
+        "message": built_message["message"],
+    }
+
+    # Add category-specific content
+    if (
+        transaction.category == TxCategory.DEPOSIT
+        and transaction.destination_account
+    ):
+        content.update(
+            {
+                "account_name": transaction.destination_account.account_name,
+                "account_type": transaction.account_type,
+            }
+        )
+    elif (
+        transaction.category == TxCategory.TRANSFER_INT
+        and transaction.destination_account
+    ):
+        content.update(
+            {
+                "destination_account": transaction.destination_account,
+                "source_account": transaction.source_account,
+            }
+        )
+    elif transaction.category in [
+        TxCategory.TRANSFER_EXT,
+        TxCategory.WITHDRAWAL,
+    ]:
+        content.update(
+            {
+                "source_account": transaction.source_account,
+            }
+        )
+        # Add external transfer specific data if available
+        if hasattr(transaction, "meta") and transaction.meta:
+            content.update(
+                {
+                    "beneficiary_name": transaction.meta.beneficiary_name,
+                    "beneficiary_bank_name": transaction.meta.beneficiary_bank_name,
+                }
+            )
+
+    # Determine template based on category and status
+    template_name = f"{transaction.category}_{transaction.status}"
+
+    return {
+        "title": built_message["title"],
+        "content": content,
+        "recipient": user.email,
+        "template": template_name,
+        "message": built_message["message"],
+    }
+
+
+@receiver(post_save, sender=Transaction)
+def transaction_signal(sender, instance, created, **kwargs):
+    if instance or created:
+        built_message = build_transaction_message(instance)
+        # Determine the user to notify based on transaction category
+        if instance.category == TxCategory.DEPOSIT:
+            user_to_notify = (
+                instance.destination_account.user
+                if instance.destination_account
+                else None
+            )
+        else:
+            user_to_notify = (
+                instance.source_account.user
+                if instance.source_account
+                else None
+            )
+
+        if not user_to_notify:
+            print(
+                f"[SIG] No user to notify for transaction {instance.reference}"
+            )
+            return
+
+        # Build mail_options based on transaction type and status
+        mail_options = None
+        if user_to_notify.email_notifications:
+            mail_options = build_mail_options_for_transaction(
+                instance, built_message
+            )
+
+        send_notification(
+            user_to_notify,
+            built_message["message"],
+            built_message["title"],
+            type=NotificationType.TRANSACTION,
+            mail_options=mail_options,
+        )

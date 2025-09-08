@@ -1,68 +1,101 @@
 <!doctype html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>{{ title }}</title>
     <style>
       body {
         font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        margin: 0;
+        background: #f9f9f9;
         padding: 20px;
-        color: #333;
       }
       .container {
-        background: #ffffff;
+        background: #fff;
+        border-radius: 8px;
         padding: 20px;
-        border-radius: 10px;
         max-width: 600px;
         margin: auto;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       }
-      h2 {
-        color: #2e7d32;
-        margin-top: 0;
+      .header {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #27ae60;
+        text-align: center;
       }
-      .details {
-        margin: 20px 0;
-        padding: 15px;
-        background: #f1f8e9;
-        border-radius: 8px;
+      .content {
+        line-height: 1.6;
+        color: #34495e;
       }
-      .details p {
-        margin: 6px 0;
+      .success-badge {
+        background: #d5f4e6;
+        color: #27ae60;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+      .amount {
+        font-size: 20px;
+        font-weight: bold;
+        color: #27ae60;
+      }
+      .balance {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+        background: #ecf0f1;
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+        margin: 15px 0;
       }
       .footer {
-        margin-top: 20px;
         font-size: 12px;
-        color: #777;
+        color: #7f8c8d;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #ecf0f1;
         text-align: center;
+      }
+      .reference {
+        background: #ecf0f1;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h2>{{ title }} 🎉</h2>
-      <p>Hi {{ content.user.first_name }},</p>
-      <p>
-        Your deposit has been processed successfully. Below are the details:
-      </p>
+      <div class="header">✅ Deposit Successful</div>
+      
+      <div class="content">
+        <div class="success-badge">✓ Transaction Completed</div>
+        
+        <p>Hello {{ user.first_name }},</p>
 
-      <div class="details">
-        <p>
-          <strong>Amount:</strong> {{ content.amount }} {{ content.currency }}
-        </p>
-        <p><strong>Account:</strong> {{ content.account_name }}</p>
-        <p><strong>Reference:</strong> {{ content.reference }}</p>
+        <p>Great news! Your deposit of <span class="amount">{{ amount }} {{ currency }}</span> has been successfully credited to your account.</p>
+
+        <p><strong>Account:</strong> {{ account_name }} ({{ account_type|title }})</p>
+        
+        {% if new_balance %}
+        <div class="balance">
+          New Balance: {{ new_balance }} {{ currency }}
+        </div>
+        {% endif %}
+
+        <p><strong>Reference:</strong> <span class="reference">{{ reference }}</span></p>
+
+        <p>Your funds are now available for use. You can check your account balance anytime through our mobile app or online banking portal.</p>
+
+        <p>Thank you for banking with us!</p>
       </div>
 
-      <p>Thank you for banking with us.</p>
-
       <div class="footer">
-        <p>
-          &copy; {{ content.current_year }} Cortanae Capital Bank. All rights
-          reserved.
-        </p>
+        <p>© {{ current_year }} Cortanae Bank. All rights reserved.</p>
+        <p>This is an automated message. Please do not reply to this email.</p>
       </div>
     </div>
   </body>

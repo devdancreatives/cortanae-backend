@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+        padding: 20px;
+      }
+      .container {
+        background: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 600px;
+        margin: auto;
+      }
+      .header {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .footer {
+        font-size: 12px;
+        color: #777;
+        margin-top: 20px;
+      }
+      .highlight {
+        font-weight: bold;
+        color: #0a7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">{{ title }}</div>
+      <p>Hello {{ user.first_name }},</p>
+
+      <p>{{ message }}</p>
+
+      {% if new_balance %}
+      <p>New Balance: <span class="highlight">{{ new_balance }}</span></p>
+      {% endif %} {% if error_message %}
+      <p style="color: red">Error: {{ error_message }}</p>
+      {% endif %} {% if tx_type == "transfer_internal" %}
+      <p>Recipient: {{ destination_account.account_name }}</p>
+      {% elif tx_type == "transfer_external" %}
+      <p>
+        Beneficiary: {{ meta.beneficiary_name }} ({{ meta.beneficiary_bank_name
+        }})
+      </p>
+      {% elif tx_type == "withdrawal" %}
+      <p>Withdrawal Method: {{ method|title }}</p>
+      {% endif %}
+
+      <div class="footer">
+        Thank you for banking with {{ company_name }}. <br />
+        Reference: {{ reference }}
+      </div>
+    </div>
+  </body>
+</html>

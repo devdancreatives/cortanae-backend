@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+        padding: 20px;
+      }
+      .container {
+        background: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 600px;
+        margin: auto;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #2c3e50;
+        text-align: center;
+      }
+      .content {
+        line-height: 1.6;
+        color: #34495e;
+      }
+      .highlight {
+        font-weight: bold;
+        color: #e67e22;
+        background: #fef9e7;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .amount {
+        font-size: 20px;
+        font-weight: bold;
+        color: #27ae60;
+      }
+      .footer {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #ecf0f1;
+        text-align: center;
+      }
+      .reference {
+        background: #ecf0f1;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">💰 Deposit Pending</div>
+      
+      <div class="content">
+        <p>Hello {{ user.first_name }},</p>
+
+        <p>Your deposit of <span class="amount">{{ amount }} {{ currency }}</span> is currently being processed.</p>
+
+        <p><strong>Account:</strong> {{ account_name }} ({{ account_type|title }})</p>
+        <p><strong>Reference:</strong> <span class="reference">{{ reference }}</span></p>
+
+        <p>We'll notify you once the deposit has been successfully credited to your account. This usually takes 1-2 business days.</p>
+
+        <p>If you have any questions, please don't hesitate to contact our support team.</p>
+
+        <p>Thank you for choosing our banking services!</p>
+      </div>
+
+      <div class="footer">
+        <p>© {{ current_year }} Cortanae Bank. All rights reserved.</p>
+        <p>This is an automated message. Please do not reply to this email.</p>
+      </div>
+    </div>
+  </body>
+</html>
