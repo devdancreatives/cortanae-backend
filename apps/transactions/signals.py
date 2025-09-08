@@ -317,19 +317,29 @@ def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
     }
 
 
-def build_mail_options_for_transaction(transaction: Transaction, built_message: Dict[str, str]) -> Dict[str, Any]:
+def build_mail_options_for_transaction(
+    transaction: Transaction, built_message: Dict[str, str]
+) -> Dict[str, Any]:
     """
     Build mail_options dictionary for transaction notifications based on category and status.
     """
     # Determine the user to notify
     if transaction.category == TxCategory.DEPOSIT:
-        user = transaction.destination_account.user if transaction.destination_account else None
+        user = (
+            transaction.destination_account.user
+            if transaction.destination_account
+            else None
+        )
     else:
-        user = transaction.source_account.user if transaction.source_account else None
-    
+        user = (
+            transaction.source_account.user
+            if transaction.source_account
+            else None
+        )
+
     if not user:
         return None
-    
+
     # Base content for all transactions
     content = {
         "user": user,
@@ -340,32 +350,49 @@ def build_mail_options_for_transaction(transaction: Transaction, built_message: 
         "title": built_message["title"],
         "message": built_message["message"],
     }
-    
+
     # Add category-specific content
-    if transaction.category == TxCategory.DEPOSIT and transaction.destination_account:
-        content.update({
-            "account_name": transaction.destination_account.account_name,
-            "account_type": transaction.account_type,
-        })
-    elif transaction.category == TxCategory.TRANSFER_INT and transaction.destination_account:
-        content.update({
-            "destination_account": transaction.destination_account,
-            "source_account": transaction.source_account,
-        })
-    elif transaction.category in [TxCategory.TRANSFER_EXT, TxCategory.WITHDRAWAL]:
-        content.update({
-            "source_account": transaction.source_account,
-        })
+    if (
+        transaction.category == TxCategory.DEPOSIT
+        and transaction.destination_account
+    ):
+        content.update(
+            {
+                "account_name": transaction.destination_account.account_name,
+                "account_type": transaction.account_type,
+            }
+        )
+    elif (
+        transaction.category == TxCategory.TRANSFER_INT
+        and transaction.destination_account
+    ):
+        content.update(
+            {
+                "destination_account": transaction.destination_account,
+                "source_account": transaction.source_account,
+            }
+        )
+    elif transaction.category in [
+        TxCategory.TRANSFER_EXT,
+        TxCategory.WITHDRAWAL,
+    ]:
+        content.update(
+            {
+                "source_account": transaction.source_account,
+            }
+        )
         # Add external transfer specific data if available
-        if hasattr(transaction, 'meta') and transaction.meta:
-            content.update({
-                "beneficiary_name": transaction.meta.beneficiary_name,
-                "beneficiary_bank_name": transaction.meta.beneficiary_bank_name,
-            })
-    
+        if hasattr(transaction, "meta") and transaction.meta:
+            content.update(
+                {
+                    "beneficiary_name": transaction.meta.beneficiary_name,
+                    "beneficiary_bank_name": transaction.meta.beneficiary_bank_name,
+                }
+            )
+
     # Determine template based on category and status
     template_name = f"{transaction.category}_{transaction.status}"
-    
+
     return {
         "title": built_message["title"],
         "content": content,
@@ -378,22 +405,34 @@ def build_mail_options_for_transaction(transaction: Transaction, built_message: 
 @receiver(post_save, sender=Transaction)
 def transaction_signal(sender, instance, created, **kwargs):
     if instance or created:
-        built_message = build_transaction_message(instance)        
+        built_message = build_transaction_message(instance)
         # Determine the user to notify based on transaction category
         if instance.category == TxCategory.DEPOSIT:
-            user_to_notify = instance.destination_account.user if instance.destination_account else None
+            user_to_notify = (
+                instance.destination_account.user
+                if instance.destination_account
+                else None
+            )
         else:
-            user_to_notify = instance.source_account.user if instance.source_account else None
-        
+            user_to_notify = (
+                instance.source_account.user
+                if instance.source_account
+                else None
+            )
+
         if not user_to_notify:
-            print(f"[SIG] No user to notify for transaction {instance.reference}")
+            print(
+                f"[SIG] No user to notify for transaction {instance.reference}"
+            )
             return
-            
+
         # Build mail_options based on transaction type and status
         mail_options = None
         if user_to_notify.email_notifications:
-            mail_options = build_mail_options_for_transaction(instance, built_message)
-        
+            mail_options = build_mail_options_for_transaction(
+                instance, built_message
+            )
+
         send_notification(
             user_to_notify,
             built_message["message"],
