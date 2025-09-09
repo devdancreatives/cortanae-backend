@@ -1,5 +1,3 @@
-from django.core.checks import messages
-from django.db import IntegrityError
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
@@ -12,7 +10,6 @@ from random import choices
 from decimal import Decimal
 from django.db import transaction
 from django.db.models import F
-from rest_framework.exceptions import ReturnList
 
 from apps.notifications.models import NotificationType
 from apps.notifications.service.notification_service import send_notification
