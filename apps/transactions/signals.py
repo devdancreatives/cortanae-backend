@@ -336,8 +336,16 @@ def build_mail_options_for_transaction(
 
     if not user:
         return None
+    else:
+        user = (
+            transaction.source_account.user
+            if transaction.source_account
+            else None
+        )
 
-    # Base content for all transactions
+    if not user:
+        return None
+
     content = {
         "user": user,
         "current_year": timezone.now().year,
@@ -389,6 +397,48 @@ def build_mail_options_for_transaction(
 
     # Determine template based on category and status
     template_name = f"{transaction.category}_{transaction.status}.html"
+
+    # Add category-specific content
+    if (
+        transaction.category == TxCategory.DEPOSIT
+        and transaction.destination_account
+    ):
+        content.update(
+            {
+                "account_name": transaction.destination_account.account_name,
+                "account_type": transaction.account_type,
+            }
+        )
+    elif (
+        transaction.category == TxCategory.TRANSFER_INT
+        and transaction.destination_account
+    ):
+        content.update(
+            {
+                "destination_account": transaction.destination_account,
+                "source_account": transaction.source_account,
+            }
+        )
+    elif transaction.category in [
+        TxCategory.TRANSFER_EXT,
+        TxCategory.WITHDRAWAL,
+    ]:
+        content.update(
+            {
+                "source_account": transaction.source_account,
+            }
+        )
+        # Add external transfer specific data if available
+        if hasattr(transaction, "meta") and transaction.meta:
+            content.update(
+                {
+                    "beneficiary_name": transaction.meta.beneficiary_name,
+                    "beneficiary_bank_name": transaction.meta.beneficiary_bank_name,
+                }
+            )
+
+    # Determine template based on category and status
+    template_name = f"{transaction.category}_{transaction.status}"
 
     return {
         "title": built_message["title"],
