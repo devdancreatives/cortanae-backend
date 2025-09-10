@@ -218,8 +218,6 @@ def credit_account_on_successful_deposit(
                 else None
             )
 
-            print("handling deposit")
-
             send_notification(
                 user=instance.destination_account.user,
                 content=content,
