@@ -69,6 +69,7 @@ def credit_account_on_successful_deposit(
     update it instead of creating a duplicate.
     """
     # --- Preconditions ---
+
     if instance.category != TxCategory.DEPOSIT:
         return
     if not _is_success_status(instance.status):
@@ -82,7 +83,6 @@ def credit_account_on_successful_deposit(
     if not instance.amount or instance.amount <= 0:
         print("[SIG] Invalid amount; skipping credit.")
         return
-
     # Idempotency: only skip if we've already posted credit for THIS tx
     already_credited = instance.history.filter(
         metadata__credit_posted=True
@@ -217,6 +217,8 @@ def credit_account_on_successful_deposit(
                 if instance.destination_account.user.email_notifications
                 else None
             )
+
+            print("handling deposit")
 
             send_notification(
                 user=instance.destination_account.user,
@@ -388,7 +390,7 @@ def build_mail_options_for_transaction(
             )
 
     # Determine template based on category and status
-    template_name = f"{transaction.category}_{transaction.status}"
+    template_name = f"{transaction.category}_{transaction.status}.html"
 
     return {
         "title": built_message["title"],
@@ -429,6 +431,7 @@ def transaction_signal(sender, instance, created, **kwargs):
             mail_options = build_mail_options_for_transaction(
                 instance, built_message
             )
+        print(mail_options)
 
         send_notification(
             user_to_notify,

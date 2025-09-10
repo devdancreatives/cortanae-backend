@@ -3,6 +3,7 @@ from typing import Any
 from django.conf import settings
 from django.core.mail import send_mail, send_mass_mail, get_connection
 from django.template.loader import render_to_string
+import traceback
 
 
 class Mailer:
@@ -40,13 +41,20 @@ class Mailer:
         Returns:
                 str: _description_
         """
+        print(content)
         if not content:
             raise ValueError("No content provided")
         if not template:
             raise ValueError("No template provided")
         if template:
-            data = render_to_string(template, content)
-            return data
+            print(template)
+            try:
+                data = render_to_string(template, content)
+                print("generated data", data)
+                return data
+            except Exception as e:
+                print("this is the error message", e)
+                traceback.print_exc()
 
     def mail_send(
         self,
@@ -59,7 +67,9 @@ class Mailer:
         password: str = "",
     ) -> None:
         try:
+            print("sending....", type(content))
             content = self._create_message(template, content)
+            print(content)
             if not sender:
                 sender = self.sender
             if not password:
