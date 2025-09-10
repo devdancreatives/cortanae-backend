@@ -316,7 +316,11 @@ def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
 
 def build_mail_options_for_transaction(
     transaction: Transaction, built_message: Dict[str, str]
+<<<<<<< HEAD
 ) -> Dict[str, Any] | None:
+=======
+) -> Dict[str, Any]:
+>>>>>>> main
     """
     Build mail_options dictionary for transaction notifications based on category and status.
     """
@@ -336,6 +340,7 @@ def build_mail_options_for_transaction(
 
     if not user:
         return None
+<<<<<<< HEAD
     else:
         user = (
             transaction.source_account.user
@@ -346,6 +351,10 @@ def build_mail_options_for_transaction(
     if not user:
         return None
 
+=======
+
+    # Base content for all transactions
+>>>>>>> main
     content = {
         "user": user,
         "current_year": timezone.now().year,
@@ -396,6 +405,7 @@ def build_mail_options_for_transaction(
             )
 
     # Determine template based on category and status
+<<<<<<< HEAD
     template_name = f"{transaction.category}_{transaction.status}.html"
 
     # Add category-specific content
@@ -439,6 +449,9 @@ def build_mail_options_for_transaction(
 
     # Determine template based on category and status
     template_name = f"{transaction.category}_{transaction.status}.html"
+=======
+    template_name = f"{transaction.category}_{transaction.status}"
+>>>>>>> main
 
     return {
         "title": built_message["title"],
@@ -479,6 +492,10 @@ def transaction_signal(sender, instance, created, **kwargs):
             mail_options = build_mail_options_for_transaction(
                 instance, built_message
             )
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
         send_notification(
             user_to_notify,
             built_message["message"],
