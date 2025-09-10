@@ -218,8 +218,6 @@ def credit_account_on_successful_deposit(
                 else None
             )
 
-            print("handling deposit")
-
             send_notification(
                 user=instance.destination_account.user,
                 content=content,
@@ -431,8 +429,6 @@ def transaction_signal(sender, instance, created, **kwargs):
             mail_options = build_mail_options_for_transaction(
                 instance, built_message
             )
-        print(mail_options)
-
         send_notification(
             user_to_notify,
             built_message["message"],
