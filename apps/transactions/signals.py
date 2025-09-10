@@ -316,7 +316,7 @@ def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
 
 def build_mail_options_for_transaction(
     transaction: Transaction, built_message: Dict[str, str]
-) -> Dict[str, Any]:
+) -> Dict[str, Any] | None:
     """
     Build mail_options dictionary for transaction notifications based on category and status.
     """
