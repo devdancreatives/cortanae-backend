@@ -438,7 +438,7 @@ def build_mail_options_for_transaction(
             )
 
     # Determine template based on category and status
-    template_name = f"{transaction.category}_{transaction.status}"
+    template_name = f"{transaction.category}_{transaction.status}.html"
 
     return {
         "title": built_message["title"],

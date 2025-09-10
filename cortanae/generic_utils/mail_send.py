@@ -47,7 +47,7 @@ class Mailer:
         if not template:
             raise ValueError("No template provided")
         if template:
-            print(template)
+            print("this is the template: ", template)
             try:
                 data = render_to_string(template, content)
                 print("generated data", data)
