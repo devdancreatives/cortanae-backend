@@ -18,7 +18,13 @@ from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+<<<<<<< HEAD
 
+=======
+SERVICE_FILE = config("SERVICE_FILE")
+
+FCM_PROJECT_ID = config("FCM_ID")
+>>>>>>> e148a94 (move service file name to env)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -33,6 +39,11 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 
 TOKEN_EXPIRY_MINUTES = 60
 
+<<<<<<< HEAD
+=======
+VAPID_TEST_PUB_KEY = config("VAPID_TEST_PUB_KEY")
+VAPID_TEST_PRIV_KEY = config("VAPID_TEST_PRIV_KEY")
+>>>>>>> e148a94 (move service file name to env)
 # Application definition
 
 
