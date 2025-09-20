@@ -485,8 +485,6 @@ def transaction_signal(sender, instance, created, **kwargs):
                 f"[SIG] No user to notify for transaction {instance.reference}"
             )
             return
-
-        # Build mail_options based on transaction type and status
         mail_options = None
         if user_to_notify.email_notifications:
             mail_options = build_mail_options_for_transaction(
