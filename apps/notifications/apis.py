@@ -1,9 +1,12 @@
 from rest_framework.response import Response
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from apps.notifications.models import Notification
-from apps.notifications.serializers import NotificationSerializer
+from apps.notifications.models import Notification, FCMDevice
+from apps.notifications.serializers import (
+    NotificationSerializer,
+    FCMNotificationSerializer,
+)
 from rest_framework import status
 
 
@@ -49,3 +52,12 @@ class MarkAllNotificationsRead(APIView):
             is_read=True
         )
         return Response({"detail": "All marked as read."})
+
+
+class FCMDeviceCreateView(CreateAPIView):
+    queryset = FCMDevice.objects.all()
+    serializer_class = FCMNotificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

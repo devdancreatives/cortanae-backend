@@ -42,3 +42,7 @@ dist/
 *.egg-info/
 __pycache__/
 __pycache__
+
+index.html
+cortanae-testing-firebase.*
+db.sqlite3

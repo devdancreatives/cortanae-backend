@@ -18,7 +18,9 @@ from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+SERVICE_FILE = config("SERVICE_FILE")
 
+FCM_PROJECT_ID = config("FCM_ID")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -220,6 +222,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
+    "http://localhost:8080",
     "https://cortanae.com",
     "www.cortanae.com",
     "https://www.cortanae.com",
