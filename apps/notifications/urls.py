@@ -25,5 +25,6 @@ urlpatterns = [
         name="mark-all-notifications-read",
     ),
     path("fcm-devices/", FCMDeviceCreateView.as_view(), name="fcm devices"),
+    path("fcm-devices/<uuid:pk>/delete/", FCMDeviceCreateView.as_view(), name="remove_device"),
 ]
 
