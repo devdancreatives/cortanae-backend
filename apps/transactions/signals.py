@@ -316,11 +316,7 @@ def build_transaction_message(transaction: Transaction) -> Dict[str, str]:
 
 def build_mail_options_for_transaction(
     transaction: Transaction, built_message: Dict[str, str]
-<<<<<<< HEAD
-) -> Dict[str, Any] | None:
-=======
 ) -> Dict[str, Any]:
->>>>>>> main
     """
     Build mail_options dictionary for transaction notifications based on category and status.
     """
@@ -340,21 +336,8 @@ def build_mail_options_for_transaction(
 
     if not user:
         return None
-<<<<<<< HEAD
-    else:
-        user = (
-            transaction.source_account.user
-            if transaction.source_account
-            else None
-        )
-
-    if not user:
-        return None
-
-=======
 
     # Base content for all transactions
->>>>>>> main
     content = {
         "user": user,
         "current_year": timezone.now().year,
@@ -405,53 +388,7 @@ def build_mail_options_for_transaction(
             )
 
     # Determine template based on category and status
-<<<<<<< HEAD
-    template_name = f"{transaction.category}_{transaction.status}.html"
-
-    # Add category-specific content
-    if (
-        transaction.category == TxCategory.DEPOSIT
-        and transaction.destination_account
-    ):
-        content.update(
-            {
-                "account_name": transaction.destination_account.account_name,
-                "account_type": transaction.account_type,
-            }
-        )
-    elif (
-        transaction.category == TxCategory.TRANSFER_INT
-        and transaction.destination_account
-    ):
-        content.update(
-            {
-                "destination_account": transaction.destination_account,
-                "source_account": transaction.source_account,
-            }
-        )
-    elif transaction.category in [
-        TxCategory.TRANSFER_EXT,
-        TxCategory.WITHDRAWAL,
-    ]:
-        content.update(
-            {
-                "source_account": transaction.source_account,
-            }
-        )
-        # Add external transfer specific data if available
-        if hasattr(transaction, "meta") and transaction.meta:
-            content.update(
-                {
-                    "beneficiary_name": transaction.meta.beneficiary_name,
-                    "beneficiary_bank_name": transaction.meta.beneficiary_bank_name,
-                }
-            )
-
-    # Determine template based on category and status
-    template_name = f"{transaction.category}_{transaction.status}.html"
-=======
     template_name = f"{transaction.category}_{transaction.status}"
->>>>>>> main
 
     return {
         "title": built_message["title"],
@@ -485,15 +422,13 @@ def transaction_signal(sender, instance, created, **kwargs):
                 f"[SIG] No user to notify for transaction {instance.reference}"
             )
             return
+
+        # Build mail_options based on transaction type and status
         mail_options = None
         if user_to_notify.email_notifications:
             mail_options = build_mail_options_for_transaction(
                 instance, built_message
             )
-<<<<<<< HEAD
-=======
-
->>>>>>> main
         send_notification(
             user_to_notify,
             built_message["message"],

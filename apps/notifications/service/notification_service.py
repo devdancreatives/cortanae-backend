@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 from apps.notifications.models import Notification
-=======
 from pyfcm.errors import (
     AuthenticationError,
     FCMNotRegisteredError,
@@ -15,21 +13,19 @@ import os
 from cortanae.settings import BASE_DIR
 from django.contrib.auth import get_user_model
 from django.conf import settings
->>>>>>> e148a94 (move service file name to env)
 
 from cortanae.generic_utils.mail_send import mail_service
 
+User = get_user_model()
+
 
 def send_notification(user, content, title, type, mail_options=None):
-    print("in the websocket")
     Notification.objects.create(
         user=user, title=title, content=content, type=type
     )
 
     if user.email_notifications and mail_options:
         mail_service.mail_send(**mail_options)
-<<<<<<< HEAD
-=======
 
 
 def send_push_notification(
@@ -87,4 +83,3 @@ def send_push_notification(
         ]
         return push_service.async_notify_multiple_devices(params_list)
     return "no token"
->>>>>>> e148a94 (move service file name to env)

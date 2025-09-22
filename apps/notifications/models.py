@@ -38,3 +38,11 @@ class Notification(BaseModelMixin):
 
     def __str__(self):
         return f"[{self.type}] {self.title} → {self.user.username}"
+
+
+class FCMDevice(models.Model):
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        User, related_name="fcm_devices", on_delete=models.CASCADE
+    )

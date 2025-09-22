@@ -42,9 +42,7 @@ dist/
 *.egg-info/
 __pycache__/
 __pycache__
-<<<<<<< HEAD
-cortanae*.json
-=======
 
-text.html
->>>>>>> 2fa2899 (create psuh notifications)
+index.html
+cortanae-testing-firebase.*
+db.sqlite3
