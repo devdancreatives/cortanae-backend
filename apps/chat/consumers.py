@@ -7,6 +7,9 @@ from django.db import IntegrityError
 from apps.chat.models import Chat, Room
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from apps.notifications.service.notification_service import (
+    send_push_notification,
+)
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -24,6 +27,7 @@ def _mark_seen_sync(slug: str):
     except Chat.DoesNotExist:
         logger.warning(f"[WS][SEEN] Message with slug {slug} not found")
 
+
 mark_seen = sync_to_async(_mark_seen_sync, thread_sensitive=False)
 
 
@@ -38,9 +42,11 @@ def create_new_message_sync(sender_id, receiver_id, message, room_id, slug):
         if slug:
             existing = Chat.objects.filter(slug=slug).first()
             if existing:
-                print(f"[DB] slug already exists; returning existing id={existing.id}")
+                print(
+                    f"[DB] slug already exists; returning existing id={existing.id}"
+                )
                 return existing
-            
+
         chat = Chat.objects.create(
             room_id=room,
             slug=slug,
@@ -60,9 +66,7 @@ def create_new_message_sync(sender_id, receiver_id, message, room_id, slug):
         logger.exception(f"Unexpected error creating message: {e}")
 
 
-create_message = sync_to_async(
-    create_new_message_sync, thread_sensitive=False
-)
+create_message = sync_to_async(create_new_message_sync, thread_sensitive=False)
 
 
 def handle_read_receipt_sync(slug):
@@ -90,17 +94,22 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
         try:
             user = self.scope.get("user")
             # 🔒 Require authenticated user (JWT or session via middleware)
-            if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+            if (
+                not user
+                or isinstance(user, AnonymousUser)
+                or not user.is_authenticated
+            ):
                 print("[WS][AUTH] Anonymous connection rejected")
                 await self.close(code=4401)  # 4401: Unauthorized (custom)
                 return
 
             self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
             self.room_group_name = f"chat_{self.room_name}"
-            await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+            await self.channel_layer.group_add(
+                self.room_group_name, self.channel_name
+            )
             await self.accept()
-            
-           
+
         except Exception as e:
             print(f"[WS] connect error: {e}")
             logger.exception("[WS] connect error: %s", e)
@@ -118,7 +127,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
         print("Received data", data)
 
         # 🚨 Always use scope user for sender (security)
-        sender_id = data["sender"]['id']
+        sender_id = data["sender"]["id"]
         receiver_id = data["receiver"]
         slug = data["slug"]
         text = data["text"]
@@ -139,6 +148,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
                     "date": date,
                 },
             )
+
             return
 
         if not receiver_id or not text:
@@ -154,8 +164,12 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
                 room_id=self.room_name,
                 slug=slug,
             )
+            receiver = User.objects.filter(id=receiver_id).first()
+            send_push_notification(
+                "", "You have a new message", True, receiver
+            )
             # add notification logic here
-            
+
         except Exception:
             # Already logged in helper
             return
@@ -178,4 +192,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
     # 🔊 Group fan-out: pure broadcast — NO DB writes here
     async def broadcast_message(self, event):
         await self.send(text_data=json.dumps(event))
-        print(f"[WS][SEND] {event.get('event')} slug={event.get('slug')} to {self.channel_name}")
+        print(
+            f"[WS][SEND] {event.get('event')} slug={event.get('slug')} to {self.channel_name}"
+        )
+
