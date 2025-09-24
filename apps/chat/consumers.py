@@ -155,25 +155,6 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
             print("[WS][VALIDATION] Missing receiver or empty text")
             return
 
-        # 🛑 FIX: Save once here (only sender's consumer runs `receive`)
-        try:
-            await create_message(
-                sender_id=sender_id,
-                receiver_id=receiver_id,
-                message=text,
-                room_id=self.room_name,
-                slug=slug,
-            )
-            receiver = User.objects.filter(id=receiver_id).first()
-            send_push_notification(
-                "", "You have a new message", True, receiver
-            )
-            # add notification logic here
-
-        except Exception:
-            # Already logged in helper
-            return
-
         # 📣 Single one-way broadcast to group (no second DB write)
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -195,4 +176,3 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
         print(
             f"[WS][SEND] {event.get('event')} slug={event.get('slug')} to {self.channel_name}"
         )
-
