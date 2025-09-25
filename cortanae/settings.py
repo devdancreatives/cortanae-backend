@@ -218,16 +218,7 @@ CLOUDINARY = {
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 MEDIA_URL = "/media/"
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://localhost:8080",
-    "https://cortanae.com",
-    "www.cortanae.com",
-    "https://www.cortanae.com",
-    "https://cortanae-frontend.vercel.app",
-]
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", "").split(",")
 
 LOGGING = {
     "version": 1,
