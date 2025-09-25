@@ -41,8 +41,16 @@ class Notification(BaseModelMixin):
 
 
 class FCMDevice(models.Model):
-    token = models.CharField(max_length=255, unique=True)
+    token = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(
         User, related_name="fcm_devices", on_delete=models.CASCADE
     )
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "token"], name="unique_user_token")
+        ]
+    
+    def __str__(self):
+        return f"{self.user} - {self.token}"
