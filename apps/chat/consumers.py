@@ -124,7 +124,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        db("Received data", data)
+        logger.info(f"Received data {data}")
 
         # 🚨 Always use scope user for sender (security)
         sender_id = data["sender"]["id"]
