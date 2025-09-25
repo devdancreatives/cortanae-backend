@@ -84,7 +84,7 @@ class FCMDDeleteView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = FCMNotificationSerializer
 
-    def post(self, request, pk):
+    def post(self, request, *args, **kwargs):
         serializer = FCMNotificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         token = serializer.validated_data["token"]
