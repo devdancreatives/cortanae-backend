@@ -12,7 +12,7 @@ from apps.notifications.service.notification_service import (
 )
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
+db_logger = logging.getLogger("db")
 
 
 """ DB Helpers """
@@ -93,6 +93,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         try:
             user = self.scope.get("user")
+            db_logger.info(f"[WS] Connection attempt by user: {user}")
             # 🔒 Require authenticated user (JWT or session via middleware)
             if (
                 not user
@@ -112,7 +113,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             print(f"[WS] connect error: {e}")
-            logger.exception("[WS] connect error: %s", e)
+            db_logger.exception("[WS] connect error: %s", e)
             await self.close()
 
     async def disconnect(self, close_code):
@@ -124,10 +125,10 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        print("Received data", data)
+        db_logger.info(f"Received data {data}")
 
         # 🚨 Always use scope user for sender (security)
-        sender_id = data["sender"]["id"]
+        sender_id = self.scope["user"].id
         receiver_id = data["receiver"]
         slug = data["slug"]
         text = data["text"]
