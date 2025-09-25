@@ -13,6 +13,7 @@ import os
 from cortanae.settings import BASE_DIR
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from apps.users.models import User
 
 from cortanae.generic_utils.mail_send import mail_service
 
