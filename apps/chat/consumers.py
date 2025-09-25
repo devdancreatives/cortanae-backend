@@ -164,7 +164,11 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
                 room_id=self.room_name,
                 slug=slug,
             )
-            receiver = User.objects.filter(id=receiver_id).first()
+
+            # receiver = User.objects.filter(id=receiver_id).first()
+            # send_push_notification(
+            #     "", "You have a new message", True, receiver
+            # )
             # add notification logic here
 
         except Exception:

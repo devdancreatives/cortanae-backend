@@ -61,3 +61,20 @@ class FCMDeviceCreateView(CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class FCMDDeleteView(APIView):
+    queryset = FCMDevice.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = FCMNotificationSerializer
+
+    def post(self, request, pk):
+        serializer = FCMNotificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["token"]
+        
+        device = FCMDevice.objects.filter(token=token, user=request.user).first()
+        if not device:
+            return Response({"detail": "Not found."}, status=404)
+        device.delete()
+        return Response({"detail": "Deleted."}, status=status.HTTP_200_OK)
+
