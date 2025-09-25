@@ -12,7 +12,7 @@ from apps.notifications.service.notification_service import (
 )
 
 User = get_user_model()
-logger = logging.getLogger("db")
+logger = logging.getLogger(__name__)
 
 
 """ DB Helpers """
@@ -124,7 +124,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        logger.info(f"Received data {data}")
+        print("Received data", data)
 
         # 🚨 Always use scope user for sender (security)
         sender_id = data["sender"]["id"]
@@ -164,7 +164,6 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
                 room_id=self.room_name,
                 slug=slug,
             )
-
             # receiver = User.objects.filter(id=receiver_id).first()
             # send_push_notification(
             #     "", "You have a new message", True, receiver
@@ -196,3 +195,4 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
         print(
             f"[WS][SEND] {event.get('event')} slug={event.get('slug')} to {self.channel_name}"
         )
+
