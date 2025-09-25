@@ -164,6 +164,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
                 room_id=self.room_name,
                 slug=slug,
             )
+
             # receiver = User.objects.filter(id=receiver_id).first()
             # send_push_notification(
             #     "", "You have a new message", True, receiver
@@ -195,4 +196,3 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
         print(
             f"[WS][SEND] {event.get('event')} slug={event.get('slug')} to {self.channel_name}"
         )
-
