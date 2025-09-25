@@ -58,9 +58,26 @@ class FCMDeviceCreateView(CreateAPIView):
     queryset = FCMDevice.objects.all()
     serializer_class = FCMNotificationSerializer
     permission_classes = [IsAuthenticated]
+   
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        token = serializer.validated_data.get("token")
+
+        # Check if token already exists for this user
+        device, created = FCMDevice.objects.get_or_create(
+            user=request.user,
+            token=token,
+        )
+
+        # If it already exists, just return it back
+        response_serializer = self.get_serializer(device)
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED
+        )
+
 
 class FCMDDeleteView(APIView):
     queryset = FCMDevice.objects.all()
